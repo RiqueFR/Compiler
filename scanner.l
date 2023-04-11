@@ -34,10 +34,13 @@ single_line_comment 	"//".*\n
 }
 {ignore}    			{ }
 {single_line_comment}  { }
+","         { process_token("COMMA"); }
 ";"         { process_token("SEMI"); }
 "char*"     { process_token("STRING"); }
+"return"    { process_token("RETURN"); }
 "else"      { process_token("ELSE"); }
 "if"        { process_token("IF"); }
+"void"      { process_token("VOID"); }
 "int"       { process_token("INT"); }
 "float"     { process_token("FLOAT"); }
 "="         { process_token("ASSIGN"); }
@@ -51,6 +54,8 @@ single_line_comment 	"//".*\n
 "<"         { process_token("LT"); }
 ">"         { process_token("GT"); }
 "!"         { process_token("NOT"); }
+"&&"        { process_token("AND"); }
+"||"        { process_token("OR"); }
 "+"         { process_token("PLUS"); }
 "-"         { process_token("MINUS"); }
 "*"         { process_token("TIMES"); }
