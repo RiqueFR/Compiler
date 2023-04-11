@@ -49,7 +49,7 @@ single_line_comment 	"//".*\n
 "}"         { process_token("RCBRA"); }
 "=="        { process_token("EQ"); }
 "<"         { process_token("LT"); }
-">"         { process_token("LT"); }
+">"         { process_token("GT"); }
 "!"         { process_token("NOT"); }
 "+"         { process_token("PLUS"); }
 "-"         { process_token("MINUS"); }
