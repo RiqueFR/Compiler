@@ -64,8 +64,7 @@ single_line_comment 	"//".*\n
 {id}        { process_token("ID"); }
 
             /* Be sure to keep this as the last rule */
-.           { printf("LEXICAL ERROR (%d): Unknown symbol %s\n", yylineno, yytext);
-              exit(EXIT_FAILURE); }
+.           { process_token("UNKNOWN"); }
 %%
 
 int main() {
