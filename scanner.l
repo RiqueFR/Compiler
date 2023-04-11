@@ -53,6 +53,8 @@ single_line_comment 	"//".*\n
 "<"         { process_token("LT"); }
 ">"         { process_token("LT"); }
 "!"         { process_token("NOT"); }
+"&&"        { process_token("AND"); }
+"||"        { process_token("OR"); }
 "+"         { process_token("PLUS"); }
 "-"         { process_token("MINUS"); }
 "*"         { process_token("TIMES"); }
