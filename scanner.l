@@ -17,7 +17,6 @@ str_val     			\"[^"]*\"
 id          			[a-zA-Z_]+[0-9a-zA-Z_]*
 
 ignore      			[ \t\n]+
-mult_line_comment 		"/*"([^*]|("*"+[^*/]))*"*"+"/"
 single_line_comment 	"//".*\n
 
 %x IN_COMMENT
@@ -34,10 +33,13 @@ single_line_comment 	"//".*\n
 }
 {ignore}    			{ }
 {single_line_comment}  { }
+","	    { process_token("COMMA"); }
 ";"         { process_token("SEMI"); }
 "char*"     { process_token("STRING"); }
+"return"    { process_token("RETURN"); }
 "else"      { process_token("ELSE"); }
 "if"        { process_token("IF"); }
+"void"	    { process_token("VOID"); }
 "int"       { process_token("INT"); }
 "float"     { process_token("FLOAT"); }
 "="         { process_token("ASSIGN"); }
