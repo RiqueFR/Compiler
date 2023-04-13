@@ -8,6 +8,7 @@ scanner:
 
 test:
 	find $(TEST_FOLDER)/ -maxdepth 1 -type f -printf "%f\n" | while read file; do \
+		echo "Testing file: $$file" ; \
 		$(SCANNER) < $(TEST_FOLDER)/$$file | diff - $(TEST_OUT_FOLDER)/$$file ; \
 	done
 
