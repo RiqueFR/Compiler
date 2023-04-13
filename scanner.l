@@ -29,7 +29,7 @@ single_line_comment 	"//".*\n
 "*/"      BEGIN(INITIAL);
 [^*\n]+   // eat comment in chunks
 "*"       // eat the lone star
-\n        yylineno++;
+\n        // ear new line
 }
 {ignore}    			{ }
 {single_line_comment}  { }
