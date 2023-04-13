@@ -14,7 +14,7 @@ int_val     			[0-9]+
 float_val    			[0-9]+"."[0-9]+
 str_val     			\"[^"\n]*\"
 
-id          			[a-zA-Z_]+[0-9a-zA-Z_]*
+id          			[a-zA-Z_][0-9a-zA-Z_]*
 
 ignore      			[ \t\n]+
 single_line_comment 	"//".*\n
