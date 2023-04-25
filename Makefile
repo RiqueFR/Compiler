@@ -1,16 +1,24 @@
-SCANNER=./scanner
+EXEC=compiler
 TEST_FOLDER=tests
 TEST_OUT_FOLDER=tests/out
 
-scanner:
+all: bison flex gcc
+	@echo "Done."
+
+bison: parser.y
+	bison parser.y
+
+flex: scanner.l
 	flex scanner.l
-	gcc -o $(SCANNER) lex.yy.c -lfl
+
+gcc: scanner.c parser.c
+	gcc -Wall -o $(EXEC) scanner.c parser.c -ly
 
 test:
 	find $(TEST_FOLDER)/ -maxdepth 1 -type f -printf "%f\n" | while read file; do \
 		echo "Testing file: $$file" ; \
-		$(SCANNER) < $(TEST_FOLDER)/$$file | diff - $(TEST_OUT_FOLDER)/$$file ; \
+		./$(EXEC) < $(TEST_FOLDER)/$$file | diff - $(TEST_OUT_FOLDER)/$$file ; \
 	done
 
 clean:
-	rm lex.yy.c scanner
+	@rm -f *.o *.output scanner.c parser.h parser.c $(EXEC)

@@ -1,14 +1,12 @@
-%{
-
-#include <stdio.h>
-
-void process_token(const char* tk) {
-    printf("%d: %s -> %s\n", yylineno, yytext, tk);
-}
-
-%}
-
+%option outfile="scanner.c"
+%option noyywrap
+%option nounput
+%option noinput
 %option yylineno
+
+%{
+    #include "parser.h" // For the token types from bison.
+%}
 
 int_val     			[0-9]+
 float_val    			[0-9]+"."[0-9]+
@@ -17,7 +15,7 @@ str_val     			\"[^"\n]*\"
 id          			[a-zA-Z_][0-9a-zA-Z_]*
 
 ignore      			[ \t\n]+
-single_line_comment 	"//".*\n
+single_line_comment 		"//".*\n
 
 %x IN_COMMENT
 
@@ -33,44 +31,39 @@ single_line_comment 	"//".*\n
 }
 {ignore}    			{ }
 {single_line_comment}  { }
-","         { process_token("COMMA"); }
-";"         { process_token("SEMI"); }
-"while" 	{ process_token("WHILE"); }
-"if"        { process_token("IF"); }
-"else"      { process_token("ELSE"); }
-"return"    { process_token("RETURN"); }
-"void"      { process_token("VOID"); }
-"int"       { process_token("INT"); }
-"float"     { process_token("FLOAT"); }
-"char*"     { process_token("STRING"); }
-"="         { process_token("ASSIGN"); }
-"("         { process_token("LPAR"); }
-")"         { process_token("RPAR"); }
-"["         { process_token("LBRA"); }
-"]"         { process_token("RBRA"); }
-"{"         { process_token("LCBRA"); }
-"}"         { process_token("RCBRA"); }
-"=="        { process_token("EQ"); }
-"<"         { process_token("LT"); }
-">"         { process_token("GT"); }
-"!"         { process_token("NOT"); }
-"&&"        { process_token("AND"); }
-"||"        { process_token("OR"); }
-"+"         { process_token("PLUS"); }
-"-"         { process_token("MINUS"); }
-"*"         { process_token("TIMES"); }
-"/"         { process_token("OVER"); }
-{int_val}   { process_token("INT_VAL"); }
-{float_val} { process_token("FLOAT_VAL"); }
-{str_val}   { process_token("STR_VAL"); }
+","         { return COMMA; }
+";"         { return SEMI; }
+"while"     { return WHILE; }
+"if"        { return IF; }
+"else"      { return ELSE; }
+"return"    { return RETURN; }
+"void"      { return VOID; }
+"int"       { return INT; }
+"float"     { return FLOAT; }
+"char*"     { return STRING; }
+"="         { return ASSIGN; }
+"("         { return LPAR; }
+")"         { return RPAR; }
+"["         { return LBRA; }
+"]"         { return RBRA; }
+"{"         { return LCBRA; }
+"}"         { return RCBRA; }
+"=="        { return EQ; }
+"<"         { return LT; }
+">"         { return GT; }
+"!"         { return NOT; }
+"&&"        { return AND; }
+"||"        { return OR; }
+"+"         { return PLUS; }
+"-"         { return MINUS; }
+"*"         { return TIMES; }
+"/"         { return OVER; }
+{int_val}   { return INT_VAL; }
+{float_val} { return FLOAT_VAL; }
+{str_val}   { return STR_VAL; }
 
-{id}        { process_token("ID"); }
+{id}        { return ID; }
 
             /* Be sure to keep this as the last rule */
-.           { process_token("UNKNOWN"); }
+.           { return UNKNOWN; }
 %%
-
-int main() {
-	yylex();
-	return 0;
-}
