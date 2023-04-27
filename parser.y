@@ -57,24 +57,34 @@ type
 	;
 
 func_declaration
-	: type ID LPAR arg_type_list RPAR LCBRA stmt RCBRA
+	: type ID LPAR opt_param_type_list RPAR LCBRA stmt RCBRA
 	;
 
-arg_type
+param_type
 	: type ID
 	;
 
-arg_type_list
-	: arg_type
-	| arg_type_list COMMA arg_type
+param_type_list
+	: param_type
+	| param_type_list COMMA param_type
+
+opt_param_type_list
+	: %empty
+	| param_type_list
+	;
 
 func_call
-	: ID LPAR arg_list RPAR
+	: ID LPAR opt_arg_list RPAR
 	;
 
 arg_list
 	: expr
 	| arg_list COMMA expr
+	;
+
+opt_arg_list
+	: %empty
+	| arg_list
 	;
 
 loop_stmt
