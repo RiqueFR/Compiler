@@ -43,7 +43,8 @@ program
 	;
 
 stmt
-	: loop_stmt
+	: %empty
+	| loop_stmt
 	| if_stmt
 	| assign
 	| func_call SEMI
