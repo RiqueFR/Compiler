@@ -1,3 +1,4 @@
+int main() {
 ola = 1;
 /*o*/
 ola = 2;
@@ -34,4 +35,4 @@ ola = 10;
 oi */
 ola = 11;
 /* oi */ ola */
-
+}
