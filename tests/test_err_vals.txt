@@ -1,3 +1,4 @@
+int main() {
 // teste de valores inteiros positivo
 int 1x = 1;
 int _x =1;
@@ -35,3 +36,4 @@ char* 2x = "if o int for detectado, float char*";
 char* '_s_x = "(4 + (4*2) - (9/3) = sim)";
 char* A_x__ = "''";
 char* x_/_ = "< > / * - + ! == { } [ ] ( ) ";
+}
