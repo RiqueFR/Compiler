@@ -24,6 +24,9 @@
 %token	IF ELSE WHILE RETURN
 %token UNKNOWN
 
+%precedence RPAR
+%precedence ELSE
+
 %left OR
 %left AND
 %left EQ
@@ -34,8 +37,58 @@
 %precedence UMINUS
 
 %%
+program
+	: func_declaration
+	| assign
+	;
+
+stmt
+	: loop_stmt
+	| if_stmt
+	| assign
+	| func_call SEMI
+	;
+
+type
+	: INT
+	| FLOAT
+	| STRING
+	| VOID
+	;
+
+func_declaration
+	: type ID LPAR arg_type_list RPAR LCBRA stmt RCBRA
+	;
+
+arg_type
+	: type ID
+	;
+
+arg_type_list
+	: arg_type
+	| arg_type_list COMMA arg_type
+
+func_call
+	: ID LPAR arg_list RPAR
+	;
+
+arg_list
+	: expr
+	| arg_list COMMA expr
+	;
+
+loop_stmt
+	: WHILE LPAR expr RPAR LCBRA stmt RCBRA
+	;
+
+if_stmt
+	: IF LPAR expr RPAR LCBRA stmt RCBRA ELSE LCBRA stmt RCBRA
+	| IF LPAR expr RPAR LCBRA stmt RCBRA
+	;
+
 assign
-	: ID ASSIGN expr
+	: ID ASSIGN expr SEMI
+	| ID LBRA INT_VAL RBRA ASSIGN LCBRA arg_list RCBRA SEMI
 	;
 
 expr
@@ -51,6 +104,8 @@ expr
 	| expr OVER expr
 	| expr PLUS expr
 	| expr MINUS expr
+	| ID LBRA expr RBRA
+	| func_call
 	| INT_VAL
 	| FLOAT_VAL
 	| STR_VAL
