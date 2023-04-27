@@ -1,24 +1,27 @@
-ola == 2
-ola ==2
-ola== 2
-ola==2
+int main (){
+if(ola == 2){}
+if(ola ==2){}
+if(ola== 2){}
+if(ola==2){}
 
-ola > 30
-ola < 30
-ola > 40 && ola < 60
+if(ola > 30) {}
+if(ola < 30) {}
+if(ola > 40 && ola < 60) {}
 
-(ola < 2)
-!(ola < 2)
+if((ola < 2)){}
+if(!(ola < 2)){}
 
-ola == 2 || ola == 3
+if(ola == 2 || ola == 3){
 
-ola * 2
-2 * 2
-2 + 2
-3 - 2
-3- 3
-2 * ola + 2
-5 / 3
-5.3 - 1.2
-5.5-1.24556
-ola +3.1
+ola * 2;
+int a = 2 * 2;
+int b = 2 + 2;
+3 - 2;
+3- 3;
+2 * ola + 2;
+5 / 3;
+5.3 - 1.2;
+float = 5.5-1.24556;
+ola +3.1;
+}
+}
