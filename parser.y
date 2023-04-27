@@ -98,8 +98,8 @@ if_stmt
 	;
 
 assign
-	: ID ASSIGN expr SEMI
-	| ID LBRA INT_VAL RBRA ASSIGN LCBRA arg_list RCBRA SEMI
+	: type ID ASSIGN expr SEMI
+	| type ID LBRA INT_VAL RBRA ASSIGN LCBRA arg_list RCBRA SEMI
 	;
 
 expr
