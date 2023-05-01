@@ -16,7 +16,7 @@ int main (  )      		{
 	
 	char* sTring_OuT2 ="That is not a if, it is a char*";
 	
-	int int_array[3] = [0, 2, 4];
+	int int_array[3] = {0, 2, 4};
 
 	int aux = 0;
 	while ( aux < 3) {
@@ -26,12 +26,13 @@ int main (  )      		{
 
 	if((x == y && x > 3 && y < 10) || !(res > 0)) {
 		return 1;
-	} else if (res > 0)
-		return 2;
-	else {
-		return 0;
-	}
-
+	} else {
+		if (res > 0) {
+			return 2;
+		} else {
+			return 0;
+		}
+	} 
 	return 0;
 
 
