@@ -9,8 +9,10 @@
 
 %{
     #include <stdio.h>
+	#include <stdlib.h>
     int yylex(void);
     void yyerror(char const *s);
+	extern int yylineno;
 %}
 
 %token COMMA SEMI
@@ -38,16 +40,32 @@
 
 %%
 program
+	: program_stmt
+	| program program_stmt
+	;
+
+program_stmt
 	: func_declaration
-	| assign
+	| declare_id
+	;
+
+stmt_list
+	: %empty
+	| stmt_list_mult
+	;
+
+stmt_list_mult
+	: stmt
+	| stmt_list_mult stmt
 	;
 
 stmt
-	: %empty
-	| loop_stmt
+	: loop_stmt
 	| if_stmt
 	| assign
+	| declare_id
 	| func_call SEMI
+	| RETURN expr SEMI
 	;
 
 type
@@ -58,7 +76,7 @@ type
 	;
 
 func_declaration
-	: type ID LPAR opt_param_type_list RPAR LCBRA stmt RCBRA
+	: type ID LPAR opt_param_type_list RPAR LCBRA stmt_list RCBRA
 	;
 
 param_type
@@ -89,17 +107,22 @@ opt_arg_list
 	;
 
 loop_stmt
-	: WHILE LPAR expr RPAR LCBRA stmt RCBRA
+	: WHILE LPAR expr RPAR LCBRA stmt_list RCBRA
 	;
 
 if_stmt
-	: IF LPAR expr RPAR LCBRA stmt RCBRA ELSE LCBRA stmt RCBRA
-	| IF LPAR expr RPAR LCBRA stmt RCBRA
+	: IF LPAR expr RPAR LCBRA stmt_list RCBRA ELSE LCBRA stmt_list RCBRA
+	| IF LPAR expr RPAR LCBRA stmt_list RCBRA
+	;
+
+declare_id
+	: type ID ASSIGN expr SEMI
+	| type ID LBRA INT_VAL RBRA ASSIGN LCBRA arg_list RCBRA SEMI
 	;
 
 assign
-	: type ID ASSIGN expr SEMI
-	| type ID LBRA INT_VAL RBRA ASSIGN LCBRA arg_list RCBRA SEMI
+	: ID ASSIGN expr SEMI
+	| ID LBRA INT_VAL RBRA ASSIGN expr SEMI
 	;
 
 expr
@@ -123,3 +146,8 @@ expr
 	| ID
 	;
 %%
+
+void yyerror (char const *s) {
+	printf("SYNTAX ERROR (%d): %s\n", yylineno, s);
+	exit(EXIT_FAILURE);
+}
