@@ -1,0 +1,1 @@
+SYNTAX ERROR (11): syntax error, unexpected SEMI, expecting LBRA or ASSIGN
