@@ -116,7 +116,8 @@ if_stmt
 	;
 
 declare_id
-	: type ID ASSIGN expr SEMI
+	: type ID SEMI
+	| type ID ASSIGN expr SEMI
 	| type ID LBRA INT_VAL RBRA ASSIGN LCBRA arg_list RCBRA SEMI
 	;
 
