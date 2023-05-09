@@ -12,7 +12,7 @@ flex: scanner.l
 	flex scanner.l
 
 gcc: scanner.c parser.c
-	gcc -Wall -o $(EXEC) scanner.c parser.c -ly
+	gcc -Wall -o $(EXEC) scanner.c parser.c types.c tables.c -ly
 
 test:
 	find $(TEST_FOLDER)/ -maxdepth 1 -type f -printf "%f\n" | while read file; do \

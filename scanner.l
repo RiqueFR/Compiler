@@ -5,7 +5,12 @@
 %option yylineno
 
 %{
+    #include <string.h>
     #include "parser.h" // For the token types from bison.
+    #include "tables.h"
+    extern StrTable* str_table;
+    char id_string[500];
+    void new_string();
 %}
 
 int_val     			[0-9]+
@@ -60,10 +65,14 @@ single_line_comment 		"//".*\n
 "/"         { return OVER; }
 {int_val}   { return INT_VAL; }
 {float_val} { return FLOAT_VAL; }
-{str_val}   { return STR_VAL; }
+{str_val}   { new_string(); return STR_VAL; }
 
-{id}        { return ID; }
+{id}        { strcpy(id_string, yytext); return ID; }
 
             /* Be sure to keep this as the last rule */
 .           { return UNKNOWN; }
 %%
+
+void new_string() {
+    add_string(str_table, yytext);
+}
