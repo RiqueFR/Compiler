@@ -73,6 +73,15 @@ VarTable* create_var_table() {
     return vt;
 }
 
+int lookup_for_create_var(VarTable* vt, char* s, int scope) {
+    for (int i = 0; i < vt->size; i++) {
+        if (strcmp(vt->t[i].name, s) == 0 && scope == get_scope(vt, i))/*variable in the same scope passed or global scope*/  {
+            return i;
+        }
+    }
+    return -1;
+}
+
 int lookup_var(VarTable* vt, char* s, int scope) {
     for (int i = 0; i < vt->size; i++) {
         if (strcmp(vt->t[i].name, s) == 0 &&
@@ -109,8 +118,8 @@ int get_scope(VarTable* vt, int i) {
     return vt->t[i].scope;
 }
 
-void print_var_table(VarTable* vt) {
-    printf("Variables table:\n");
+void print_var_table(char* name, VarTable* vt) {
+    printf("%s table:\n", name);
     for (int i = 0; i < vt->size; i++) {
          printf("Entry %d -- name: %s, line: %d, type: %s, scope: %d\n", i,
                 get_name(vt, i), get_line(vt, i), get_text(get_type(vt, i)), get_scope(vt, i));

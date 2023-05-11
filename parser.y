@@ -14,10 +14,12 @@
     #include "tables.h"
     int yylex(void);
     void yyerror(char const *s);
+    void new_func();
+    void check_new_func();
+    void check_func();
     void new_var();
     void check_new_var();
     void check_var();
-    void check_var_with_string();
     extern int yylineno;
     extern char* yytext;
     extern char id_string[500];
@@ -25,6 +27,7 @@
     int biggest_scope = 0;
     StrTable* str_table;
     VarTable* var_table;
+    VarTable* func_table;
     Type type;
 %}
 
@@ -89,7 +92,7 @@ type
 	;
 
 func_declaration
-	: type ID { check_new_var(); } LPAR { biggest_scope++; scope = biggest_scope; } opt_param_type_list RPAR LCBRA stmt_list RCBRA { scope = 0; }
+	: type ID { check_new_func(); biggest_scope++; scope = biggest_scope; } LPAR opt_param_type_list RPAR LCBRA stmt_list RCBRA { scope = 0; }
 	;
 
 param_type
@@ -106,7 +109,7 @@ opt_param_type_list
 	;
 
 func_call
-	: ID { check_var(); } LPAR opt_arg_list RPAR
+	: ID { check_func(); } LPAR opt_arg_list RPAR
 	;
 
 arg_list
@@ -164,15 +167,19 @@ expr
 int main() {
     str_table = create_str_table();
     var_table = create_var_table();
+    func_table = create_var_table();
     if (yyparse() == 0) printf("PARSE SUCCESSFUL!\n");
     else                printf("PARSE FAILED!\n");
     printf("\n\n");
     print_str_table(str_table);
     printf("\n\n");
-    print_var_table(var_table);
+    print_var_table("Func", func_table);
+    printf("\n\n");
+    print_var_table("Var", var_table);
     printf("\n\n");
     free_str_table(str_table);
     free_var_table(var_table);
+    free_var_table(func_table);
     return 0;
 
 }
@@ -180,6 +187,26 @@ int main() {
 void yyerror (char const *s) {
 	printf("SYNTAX ERROR (%d): %s\n", yylineno, s);
 	exit(EXIT_FAILURE);
+}
+
+void new_func() {
+    add_var(func_table, id_string, yylineno, type, scope);
+}
+
+void check_func() {
+    if(lookup_var(func_table, id_string, scope) == -1) { // variable is used but do not exist
+        printf("SEMANTIC ERROR (%d): variable '%s' was not declared.\n", yylineno, id_string);
+        exit(EXIT_FAILURE);
+    }
+}
+
+void check_new_func() {
+    int table_index = lookup_for_create_var(func_table, id_string, scope);
+    if(table_index != -1) { // variable is declared but already exist
+        printf("SEMANTIC ERROR (%d): variable '%s' already declared at line %d.\n", yylineno, id_string, get_line(var_table, table_index));
+        exit(EXIT_FAILURE);
+    }
+    new_func();
 }
 
 void new_var() {
@@ -192,15 +219,9 @@ void check_var() {
         exit(EXIT_FAILURE);
     }
 }
-void check_var_with_string() {
-    if(lookup_var(var_table, id_string, scope) == -1) { // variable is used but do not exist
-        printf("SEMANTIC ERROR (%d): variable '%s' was not declared.\n", yylineno, id_string);
-        exit(EXIT_FAILURE);
-    }
-}
 
 void check_new_var() {
-    int table_index = lookup_var(var_table, id_string, scope);
+    int table_index = lookup_for_create_var(var_table, id_string, scope);
     if(table_index != -1) { // variable is declared but already exist
         printf("SEMANTIC ERROR (%d): variable '%s' already declared at line %d.\n", yylineno, id_string, get_line(var_table, table_index));
         exit(EXIT_FAILURE);

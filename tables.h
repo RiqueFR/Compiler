@@ -48,6 +48,9 @@ VarTable* create_var_table();
 int add_var(VarTable* vt, char* s, int line, Type type, int scope);
 
 // Returns the index where the given variable is stored or -1 otherwise.
+int lookup_for_create_var(VarTable* vt, char* s, int scope);
+
+// Returns the index where the given variable is stored or -1 otherwise.
 int lookup_var(VarTable* vt, char* s, int scope);
 
 // Returns the variable name stored at the given index.
@@ -67,7 +70,7 @@ Type get_type(VarTable* vt, int i);
 int get_scope(VarTable* vt, int i);
 
 // Prints the given table to stdout.
-void print_var_table(VarTable* vt);
+void print_var_table(char* name, VarTable* vt);
 
 // Clears the allocated structure.
 void free_var_table(VarTable* vt);
