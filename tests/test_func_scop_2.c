@@ -1,9 +1,9 @@
-int car(char x){
+int car(char* x){
     return 2;
 }
 
 int main(int argc)
 {
-    car('a');
+    car("a");
     return 0;
 }
