@@ -2,5 +2,7 @@ lex.yy.c
 scanner
 *.swp
 compiler
-*.h
-*.c
+scanner.c
+scanner.h
+parser.c
+parser.h
