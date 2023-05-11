@@ -1,4 +1,5 @@
 int main (){
+	int ola;
 	if(ola == 2){}
 	if(ola ==2){}
 	if(ola== 2){}

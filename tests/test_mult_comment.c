@@ -1,5 +1,5 @@
 int main() {
-	ola = 1;
+	int ola = 1;
 	/*o*/
 	ola = 2;
 	/*oi*/

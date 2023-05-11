@@ -1,5 +1,13 @@
+void printf(){
+	/* so para ele parar de quebrar*/
+}
+
 void print( char* string) {
 	printf("%s", string);
+}
+
+int calcula(int x, int y){
+	return x + y;
 }
 
 // main funtion
