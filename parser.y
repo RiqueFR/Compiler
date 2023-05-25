@@ -20,6 +20,11 @@
     void new_var();
     void check_new_var();
     void check_var();
+	void type_error(Type type_left, Type type_right, char* op_str);
+	Type check_type_sum(Type type_left, Type type_right, char* op_str);
+    Type check_type_mul(Type type_left, Type type_right, char* op_str);
+    Type check_type_op(Type type_left, Type type_right, char* op_str);
+    Type check_type_assign(Type type_left, Type type_right, char* op_str);
     extern int yylineno;
     extern char* yytext;
     extern char id_string[500];
@@ -81,7 +86,7 @@ stmt
 	| assign
 	| declare_id
 	| func_call SEMI
-	| RETURN expr SEMI
+	| RETURN expr SEMI {check_type_assign(get_type(func_table, scope - 1), $2, "Return");}
 	;
 
 type
@@ -109,7 +114,7 @@ opt_param_type_list
 	;
 
 func_call
-	: ID { check_func(); } LPAR opt_arg_list RPAR
+	: ID { check_func(); $$ = get_type(func_table, lookup_var(func_table, id_string, scope)); } LPAR opt_arg_list RPAR {$$ = $2;}
 	;
 
 arg_list
@@ -138,29 +143,29 @@ declare_id
 	;
 
 assign
-	: ID { check_var(); } ASSIGN expr SEMI
+	: ID { check_var(); $$ = get_type(var_table, lookup_var(var_table, id_string, scope)); } ASSIGN expr SEMI {check_type_assign($2, $4, "=");}
 	| ID { check_var(); } LBRA INT_VAL RBRA ASSIGN expr SEMI
 	;
 
 expr
-	: LPAR expr RPAR
-	| NOT expr
-	| MINUS expr %prec UMINUS
-	| expr AND expr
-	| expr OR expr
-	| expr LT expr
-	| expr GT expr
-	| expr EQ expr
-	| expr TIMES expr
-	| expr OVER expr
-	| expr PLUS expr
-	| expr MINUS expr
+	: LPAR expr RPAR {$$ = $2;}
+	| NOT expr {check_type_op($2, $2, "!");}
+	| MINUS expr %prec UMINUS {check_type_mul($2, $2, "-");}
+	| expr AND expr {check_type_op($1, $3, "&&");}
+	| expr OR expr {check_type_op($1, $3, "||");}
+	| expr LT expr {check_type_op($1, $3, "<");}
+	| expr GT expr {check_type_op($1, $3, ">");}
+	| expr EQ expr {check_type_op($1, $3, "==");}
+	| expr TIMES expr {check_type_mul($1, $3, "*");}
+	| expr OVER expr {check_type_mul($1, $3, "/");}
+	| expr PLUS expr {check_type_sum($1, $3, "+");}
+	| expr MINUS expr {check_type_mul($1, $3, "-");}
 	| ID { check_var(); } LBRA expr RBRA
-	| func_call
-	| INT_VAL
-	| FLOAT_VAL
-	| STR_VAL
-	| ID { check_var(); }
+	| func_call {$$ = $1;}
+	| INT_VAL {$$ = INT_TYPE;}
+	| FLOAT_VAL {$$ = REAL_TYPE;}
+	| STR_VAL {$$ = STR_TYPE;}
+	| ID { check_var(); $$ = get_type(var_table, lookup_var(var_table, id_string, scope)); }
 	;
 %%
 
@@ -227,4 +232,45 @@ void check_new_var() {
         exit(EXIT_FAILURE);
     }
     new_var();
+}
+
+void type_error(Type type_left, Type type_right, char* op_str) {
+	printf("SEMANTIC ERROR (%d): incompatible types for operator '%s', LHS is '%s' and RHS is '%s'.\n", yylineno, op_str, get_text(type_left), get_text(type_right));
+	exit(EXIT_FAILURE);
+}
+
+Type check_type_sum(Type type_left, Type type_right, char* op_str) {
+    Type type = sum(type_left, type_right);
+    if(type == ERROR) {
+	    type_error(type_left, type_right, op_str);
+	}
+    return type;
+}
+Type check_type_mul(Type type_left, Type type_right, char* op_str) {
+    Type type = mul(type_left, type_right);
+    if(type == ERROR) {
+	    type_error(type_left, type_right, op_str);
+    }   
+    return type;
+}
+Type check_type_op(Type type_left, Type type_right, char* op_str) {
+    Type type = op(type_left, type_right);
+    if(type == ERROR) {
+	    type_error(type_left, type_right, op_str);
+    }   
+    return type;
+}
+Type check_type_assign(Type type_left, Type type_right, char* op_str) {
+    Type type = assign(type_left, type_right);
+    if(type == ERROR) {
+	    type_error(type_left, type_right, op_str);
+    }   
+    return type;
+}
+
+void check_condition(Type type, char* condition) {
+    if(type == ERROR) {
+        printf("SEMANTIC ERROR (%d): conditional expression in '%s' is '%s' instead of 'bool'.\n", yylineno, condition, get_text(type));
+        exit(EXIT_FAILURE);
+    }   
 }
