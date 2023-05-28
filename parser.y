@@ -25,6 +25,8 @@
     Type check_type_mul(Type type_left, Type type_right, char* op_str);
     Type check_type_op(Type type_left, Type type_right, char* op_str);
     Type check_type_assign(Type type_left, Type type_right, char* op_str);
+	void check_condition(Type type, char* condition);
+	void check_return(Type type_function, Type type_return);
     extern int yylineno;
     extern char* yytext;
     extern char id_string[500];
@@ -86,7 +88,8 @@ stmt
 	| assign
 	| declare_id
 	| func_call SEMI
-	| RETURN expr SEMI {check_type_assign(get_type(func_table, scope - 1), $2, "Return");}
+	| RETURN expr SEMI {check_return(get_type(func_table, scope - 1), $2);}
+	| RETURN SEMI {check_return(get_type(func_table, scope - 1), VOID_TYPE);}
 	;
 
 type
@@ -128,12 +131,12 @@ opt_arg_list
 	;
 
 loop_stmt
-	: WHILE LPAR expr RPAR LCBRA stmt_list RCBRA
+	: WHILE LPAR expr RPAR LCBRA stmt_list RCBRA {check_condition($3, "while");}
 	;
 
 if_stmt
-	: IF LPAR expr RPAR LCBRA stmt_list RCBRA ELSE LCBRA stmt_list RCBRA
-	| IF LPAR expr RPAR LCBRA stmt_list RCBRA
+	: IF LPAR expr RPAR LCBRA stmt_list RCBRA ELSE LCBRA stmt_list RCBRA {check_condition($3, "if");}
+	| IF LPAR expr RPAR LCBRA stmt_list RCBRA {check_condition($3, "if");}
 	;
 
 declare_id
@@ -269,8 +272,16 @@ Type check_type_assign(Type type_left, Type type_right, char* op_str) {
 }
 
 void check_condition(Type type, char* condition) {
-    if(type == ERROR) {
-        printf("SEMANTIC ERROR (%d): conditional expression in '%s' is '%s' instead of 'bool'.\n", yylineno, condition, get_text(type));
+    if(type != INT_TYPE) {
+        printf("SEMANTIC ERROR (%d): conditional expression in '%s' is '%s' instead of 'integer'.\n", yylineno, condition, get_text(type));
+        exit(EXIT_FAILURE);
+    }   
+}
+
+void check_return(Type type_function, Type type_return) {
+    Type type = assign(type_function, type_return);
+    if(!(type_function == VOID_TYPE && type_return == VOID_TYPE) && type == ERROR) {
+        printf("SEMANTIC ERROR (%d): return type is '%s' but function should return '%s'.\n", yylineno, get_text(type_return), get_text(type_function));
         exit(EXIT_FAILURE);
     }   
 }
