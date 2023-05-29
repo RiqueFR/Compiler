@@ -7,6 +7,9 @@ typedef enum {
     REAL_TYPE,
     STR_TYPE,
     VOID_TYPE,
+	ARRAY_INT_TYPE,
+	ARRAY_REAL_TYPE,
+	ARRAY_STR_TYPE,
 	ERROR
 } Type;
 

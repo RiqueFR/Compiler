@@ -142,12 +142,58 @@ if_stmt
 declare_id
 	: type ID { check_new_var(); } SEMI
 	| type ID { check_new_var(); } ASSIGN expr SEMI
-	| type ID { check_new_var(); } LBRA INT_VAL RBRA ASSIGN LCBRA arg_list RCBRA SEMI
+	| type ID LBRA INT_VAL RBRA ASSIGN LCBRA arg_list RCBRA SEMI {
+		Type res_type = ERROR;
+		switch(type) {
+			case INT_TYPE:
+				res_type = ARRAY_INT_TYPE;
+				break;
+			case REAL_TYPE:
+				res_type = ARRAY_REAL_TYPE;
+				break;
+			case STR_TYPE:
+				res_type = ARRAY_STR_TYPE;
+				break;
+			default:
+				res_type = ERROR;
+		}
+		if(res_type == ERROR) {
+			printf("SEMANTIC ERROR (%d): assign syntax should have a valid array, but it is type '%s'.\n", yylineno, get_text(type));
+			exit(EXIT_FAILURE);
+		}
+		type = res_type;
+		check_new_var();
+	}
 	;
 
 assign
 	: ID { check_var(); $$ = get_type(var_table, lookup_var(var_table, id_string, scope)); } ASSIGN expr SEMI {check_type_assign($2, $4, "=");}
-	| ID { check_var(); } LBRA INT_VAL RBRA ASSIGN expr SEMI
+	| ID { check_var(); } LBRA expr RBRA ASSIGN expr SEMI {
+		if($4 != INT_TYPE) {
+			printf("SEMANTIC ERROR (%d): array should access 'integer' position, but it was given '%s'.\n", yylineno, get_text($4));
+			exit(EXIT_FAILURE);
+		}
+		Type res_type = get_type(var_table, lookup_var(var_table, id_string, scope));
+		Type relative_type = ERROR;
+		switch(res_type) {
+			case ARRAY_INT_TYPE:
+				relative_type = INT_TYPE;
+				break;
+			case ARRAY_REAL_TYPE:
+				relative_type = REAL_TYPE;
+				break;
+			case ARRAY_STR_TYPE:
+				relative_type = STR_TYPE;
+				break;
+			default:
+				relative_type = ERROR;
+		}
+		if(relative_type == ERROR) {
+			printf("SEMANTIC ERROR (%d): assign syntax should have a valid array, but it is type '%s'.\n", yylineno, get_text(type));
+			exit(EXIT_FAILURE);
+		}
+		check_type_assign(relative_type, $7, "=");
+	}
 	;
 
 expr
@@ -163,7 +209,26 @@ expr
 	| expr OVER expr {check_type_mul($1, $3, "/");}
 	| expr PLUS expr {check_type_sum($1, $3, "+");}
 	| expr MINUS expr {check_type_mul($1, $3, "-");}
-	| ID { check_var(); } LBRA expr RBRA
+	| ID { check_var(); } LBRA expr RBRA {
+		if($4 != INT_TYPE) {
+			printf("SEMANTIC ERROR (%d): array should access 'integer' position, but it was given '%s'.\n", yylineno, get_text($4));
+			exit(EXIT_FAILURE);
+		}
+		Type res_type = get_type(var_table, lookup_var(var_table, id_string, scope));
+		switch(res_type) {
+			case ARRAY_INT_TYPE:
+				$$ = INT_TYPE;
+				break;
+			case ARRAY_REAL_TYPE:
+				$$ = REAL_TYPE;
+				break;
+			case ARRAY_STR_TYPE:
+				$$ = STR_TYPE;
+				break;
+			default:
+				$$ = ERROR;
+		}
+	}
 	| func_call {$$ = $1;}
 	| INT_VAL {$$ = INT_TYPE;}
 	| FLOAT_VAL {$$ = REAL_TYPE;}
