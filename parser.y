@@ -141,7 +141,7 @@ if_stmt
 
 declare_id
 	: type ID { check_new_var(); } SEMI
-	| type ID { check_new_var(); } ASSIGN expr SEMI
+	| type ID { check_new_var(); } ASSIGN expr SEMI {check_type_assign(get_type(var_table, lookup_var(var_table, id_string, scope)), $5, "=");}
 	| type ID LBRA INT_VAL RBRA ASSIGN LCBRA arg_list RCBRA SEMI {
 		Type res_type = ERROR;
 		switch(type) {
@@ -198,23 +198,20 @@ assign
 
 expr
 	: LPAR expr RPAR {$$ = $2;}
-	| NOT expr {check_type_op($2, $2, "!");}
-	| MINUS expr %prec UMINUS {check_type_mul($2, $2, "-");}
-	| expr AND expr {check_type_op($1, $3, "&&");}
-	| expr OR expr {check_type_op($1, $3, "||");}
-	| expr LT expr {check_type_op($1, $3, "<");}
-	| expr GT expr {check_type_op($1, $3, ">");}
-	| expr EQ expr {check_type_op($1, $3, "==");}
-	| expr TIMES expr {check_type_mul($1, $3, "*");}
-	| expr OVER expr {check_type_mul($1, $3, "/");}
-	| expr PLUS expr {check_type_sum($1, $3, "+");}
-	| expr MINUS expr {check_type_mul($1, $3, "-");}
-	| ID { check_var(); } LBRA expr RBRA {
-		if($4 != INT_TYPE) {
-			printf("SEMANTIC ERROR (%d): array should access 'integer' position, but it was given '%s'.\n", yylineno, get_text($4));
-			exit(EXIT_FAILURE);
-		}
-		Type res_type = get_type(var_table, lookup_var(var_table, id_string, scope));
+	| NOT expr {$$ = check_type_op($2, $2, "!");}
+	| MINUS expr %prec UMINUS {$$ = check_type_mul($2, $2, "-");}
+	| expr AND expr {$$ = check_type_op($1, $3, "&&");}
+	| expr OR expr {$$ = check_type_op($1, $3, "||");}
+	| expr LT expr {$$ = check_type_op($1, $3, "<");}
+	| expr GT expr {$$ = check_type_op($1, $3, ">");}
+	| expr EQ expr {$$ = check_type_op($1, $3, "==");}
+	| expr TIMES expr {$$ = check_type_mul($1, $3, "*");}
+	| expr OVER expr {$$ = check_type_mul($1, $3, "/");}
+	| expr PLUS expr {$$ = check_type_sum($1, $3, "+");}
+	| expr MINUS expr {$$ = check_type_mul($1, $3, "-");}
+	| ID { check_var();
+		int pos = lookup_var(var_table, id_string, scope);
+		Type res_type = get_type(var_table, pos);
 		switch(res_type) {
 			case ARRAY_INT_TYPE:
 				$$ = INT_TYPE;
@@ -227,6 +224,12 @@ expr
 				break;
 			default:
 				$$ = ERROR;
+		}
+
+      } LBRA expr RBRA {
+		if($4 != INT_TYPE) {
+			printf("SEMANTIC ERROR (%d): array should access 'integer' position, but it was given '%s'.\n", yylineno, get_text($4));
+			exit(EXIT_FAILURE);
 		}
 	}
 	| func_call {$$ = $1;}
@@ -303,6 +306,7 @@ void check_new_var() {
 }
 
 void type_error(Type type_left, Type type_right, char* op_str) {
+	print_var_table("var", var_table);
 	printf("SEMANTIC ERROR (%d): incompatible types for operator '%s', LHS is '%s' and RHS is '%s'.\n", yylineno, op_str, get_text(type_left), get_text(type_right));
 	exit(EXIT_FAILURE);
 }

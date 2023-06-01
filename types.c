@@ -45,7 +45,7 @@ static const char *TYPE_STRING[] = {
     "char*",
     "void",
 	"int*",
-	"flaot*",
+	"float*",
 	"char**",
 	"error"
 };

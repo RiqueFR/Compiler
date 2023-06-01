@@ -1,7 +1,7 @@
 int main(){
     char* a = "loop";
     int i = 0;
-    while(a){
+    while(i < 10){
         i = i + 1;
     }
 }
