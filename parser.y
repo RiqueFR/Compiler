@@ -27,6 +27,8 @@
     Type check_type_assign(Type type_left, Type type_right, char* op_str);
 	void check_condition(Type type, char* condition);
 	void check_return(Type type_function, Type type_return);
+	void check_array_position_type(Type type);
+	void check_array_not_error(Type type);
     extern int yylineno;
     extern char* yytext;
     extern char id_string[500];
@@ -143,24 +145,8 @@ declare_id
 	: type ID { check_new_var(); } SEMI
 	| type ID { check_new_var(); } ASSIGN expr SEMI {check_type_assign(get_type(var_table, lookup_var(var_table, id_string, scope)), $5, "=");}
 	| type ID LBRA INT_VAL RBRA ASSIGN LCBRA arg_list RCBRA SEMI {
-		Type res_type = ERROR;
-		switch(type) {
-			case INT_TYPE:
-				res_type = ARRAY_INT_TYPE;
-				break;
-			case REAL_TYPE:
-				res_type = ARRAY_REAL_TYPE;
-				break;
-			case STR_TYPE:
-				res_type = ARRAY_STR_TYPE;
-				break;
-			default:
-				res_type = ERROR;
-		}
-		if(res_type == ERROR) {
-			printf("SEMANTIC ERROR (%d): assign syntax should have a valid array, but it is type '%s'.\n", yylineno, get_text(type));
-			exit(EXIT_FAILURE);
-		}
+		Type res_type = primitive_to_array(type);
+		check_array_not_error(res_type);
 		type = res_type;
 		check_new_var();
 	}
@@ -169,29 +155,10 @@ declare_id
 assign
 	: ID { check_var(); $$ = get_type(var_table, lookup_var(var_table, id_string, scope)); } ASSIGN expr SEMI {check_type_assign($2, $4, "=");}
 	| ID { check_var(); } LBRA expr RBRA ASSIGN expr SEMI {
-		if($4 != INT_TYPE) {
-			printf("SEMANTIC ERROR (%d): array should access 'integer' position, but it was given '%s'.\n", yylineno, get_text($4));
-			exit(EXIT_FAILURE);
-		}
+		check_array_position_type($4);
 		Type res_type = get_type(var_table, lookup_var(var_table, id_string, scope));
-		Type relative_type = ERROR;
-		switch(res_type) {
-			case ARRAY_INT_TYPE:
-				relative_type = INT_TYPE;
-				break;
-			case ARRAY_REAL_TYPE:
-				relative_type = REAL_TYPE;
-				break;
-			case ARRAY_STR_TYPE:
-				relative_type = STR_TYPE;
-				break;
-			default:
-				relative_type = ERROR;
-		}
-		if(relative_type == ERROR) {
-			printf("SEMANTIC ERROR (%d): assign syntax should have a valid array, but it is type '%s'.\n", yylineno, get_text(type));
-			exit(EXIT_FAILURE);
-		}
+		Type relative_type = array_to_primitive(res_type);
+		check_array_not_error(relative_type);
 		check_type_assign(relative_type, $7, "=");
 	}
 	;
@@ -212,26 +179,7 @@ expr
 	| ID { check_var();
 		int pos = lookup_var(var_table, id_string, scope);
 		Type res_type = get_type(var_table, pos);
-		switch(res_type) {
-			case ARRAY_INT_TYPE:
-				$$ = INT_TYPE;
-				break;
-			case ARRAY_REAL_TYPE:
-				$$ = REAL_TYPE;
-				break;
-			case ARRAY_STR_TYPE:
-				$$ = STR_TYPE;
-				break;
-			default:
-				$$ = ERROR;
-		}
-
-      } LBRA expr RBRA {
-		if($4 != INT_TYPE) {
-			printf("SEMANTIC ERROR (%d): array should access 'integer' position, but it was given '%s'.\n", yylineno, get_text($4));
-			exit(EXIT_FAILURE);
-		}
-	}
+		$$ = array_to_primitive(res_type); } LBRA expr RBRA { check_array_position_type($4); }
 	| func_call {$$ = $1;}
 	| INT_VAL {$$ = INT_TYPE;}
 	| FLOAT_VAL {$$ = REAL_TYPE;}
@@ -353,4 +301,18 @@ void check_return(Type type_function, Type type_return) {
         printf("SEMANTIC ERROR (%d): return type is '%s' but function should return '%s'.\n", yylineno, get_text(type_return), get_text(type_function));
         exit(EXIT_FAILURE);
     }   
+}
+
+void check_array_position_type(Type type) {
+	if(type != INT_TYPE) {
+		printf("SEMANTIC ERROR (%d): array should access 'integer' position, but it was given '%s'.\n", yylineno, get_text(type));
+		exit(EXIT_FAILURE);
+	}
+}
+
+void check_array_not_error(Type type) {
+	if(type == ERROR) {
+		printf("SEMANTIC ERROR (%d): assign syntax should have a valid array, but it is type '%s'.\n", yylineno, get_text(type));
+		exit(EXIT_FAILURE);
+	}
 }

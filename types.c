@@ -68,6 +68,38 @@ const int get_value(Type type) {
 	return TYPE_VALUE[type];
 }
 
+Type array_to_primitive(Type type) {
+	switch(type) {
+		case ARRAY_INT_TYPE:
+			return INT_TYPE;
+			break;
+		case ARRAY_REAL_TYPE:
+			return  REAL_TYPE;
+			break;
+		case ARRAY_STR_TYPE:
+			return  STR_TYPE;
+			break;
+		default:
+			return  ERROR;
+	}
+}
+
+Type primitive_to_array(Type type) {
+	switch(type) {
+		case INT_TYPE:
+			return ARRAY_INT_TYPE;
+			break;
+		case REAL_TYPE:
+			return ARRAY_REAL_TYPE;
+			break;
+		case STR_TYPE:
+			return ARRAY_STR_TYPE;
+			break;
+		default:
+			return ERROR;
+	}
+}
+
 Type sum(Type type1, Type type2) {
 	return SUM[get_value(type1)][get_value(type2)];
 }
