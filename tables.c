@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "tables.h"
+#include "types.h"
 
 // Strings Table
 // ----------------------------------------------------------------------------
@@ -60,6 +61,8 @@ typedef struct {
   int scope;
   int line;
   Type type;
+  Type array_type;
+  int array_dimension;
 } Entry;
 
 struct var_table {
@@ -92,14 +95,24 @@ int lookup_var(VarTable* vt, char* s, int scope) {
     return -1;
 }
 
-int add_var(VarTable* vt, char* s, int line, Type type, int scope) {
+int add_to_var_table(VarTable* vt, char* s, int line, Type type, Type array_type, int scope, int dimension) {
     strcpy(vt->t[vt->size].name, s);
     vt->t[vt->size].line = line;
     vt->t[vt->size].type = type;
+    vt->t[vt->size].array_type = array_type;
     vt->t[vt->size].scope = scope;
+    vt->t[vt->size].array_dimension = dimension;
     int idx_added = vt->size;
     vt->size++;
     return idx_added;
+}
+
+int add_var(VarTable* vt, char* s, int line, Type type, int scope) {
+	return add_to_var_table(vt, s, line, type, type, scope, 0);
+}
+
+int add_array(VarTable* vt, char* s, int line, Type type, int scope, int dimension) {
+	return add_to_var_table(vt, s, line, ARRAY, type, scope, dimension);
 }
 
 char* get_name(VarTable* vt, int i) {
@@ -108,6 +121,10 @@ char* get_name(VarTable* vt, int i) {
 
 int get_line(VarTable* vt, int i) {
     return vt->t[i].line;
+}
+
+Type get_array_type(VarTable* vt, int i) {
+    return vt->t[i].array_type;
 }
 
 Type get_type(VarTable* vt, int i) {

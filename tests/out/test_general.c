@@ -21,7 +21,7 @@ Entry 3 -- name: x, line: 15, type: int, scope: 4
 Entry 4 -- name: y, line: 16, type: int, scope: 4
 Entry 5 -- name: res, line: 23, type: float, scope: 4
 Entry 6 -- name: sTring_OuT2, line: 25, type: char*, scope: 4
-Entry 7 -- name: int_array, line: 27, type: int*, scope: 4
+Entry 7 -- name: int_array, line: 27, type: array, scope: 4
 Entry 8 -- name: aux, line: 29, type: int, scope: 4
 
 

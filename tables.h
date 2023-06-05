@@ -45,7 +45,11 @@ VarTable* create_var_table();
 // Adds a fresh var to the table.
 // No check is made by this function, so make sure to call 'lookup_var' first.
 // Returns the index where the variable was inserted.
+int add_to_var_table(VarTable* vt, char* s, int line, Type type, Type array_type, int scope, int dimension);
+
 int add_var(VarTable* vt, char* s, int line, Type type, int scope);
+
+int add_array(VarTable* vt, char* s, int line, Type type, int scope, int dimension);
 
 // Returns the index where the given variable is stored or -1 otherwise.
 int lookup_for_create_var(VarTable* vt, char* s, int scope);
@@ -64,6 +68,8 @@ int get_line(VarTable* vt, int i);
 // Returns the variable type stored at the given index.
 // No check is made by this function, so make sure that the index is valid first.
 Type get_type(VarTable* vt, int i);
+
+Type get_array_type(VarTable* vt, int i);
 
 // Returns the variable scope stored at the given index.
 // No check is made by this function, so make sure that the index is valid first.

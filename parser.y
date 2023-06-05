@@ -18,8 +18,9 @@
     void check_new_func();
     void check_func();
     void new_var();
-    void check_new_var();
-    void check_var();
+	void new_array();
+    int check_new_var();
+    int check_var();
 	void type_error(Type type_left, Type type_right, char* op_str);
 	Type check_type_sum(Type type_left, Type type_right, char* op_str);
     Type check_type_mul(Type type_left, Type type_right, char* op_str);
@@ -72,6 +73,7 @@ program
 program_stmt
 	: func_declaration
 	| declare_id
+	| declare_array
 	;
 
 stmt_list
@@ -89,6 +91,7 @@ stmt
 	| if_stmt
 	| assign
 	| declare_id
+	| declare_array
 	| func_call SEMI
 	| RETURN expr SEMI {check_return(get_type(func_table, scope - 1), $2);}
 	| RETURN SEMI {check_return(get_type(func_table, scope - 1), VOID_TYPE);}
@@ -106,7 +109,7 @@ func_declaration
 	;
 
 param_type
-	: type ID { check_new_var(); }
+	: type ID { check_new_var(); new_var(); }
 	;
 
 param_type_list
@@ -141,26 +144,33 @@ if_stmt
 	| IF LPAR expr RPAR LCBRA stmt_list RCBRA {check_condition($3, "if");}
 	;
 
-declare_id
-	: type ID { check_new_var(); } SEMI
-	| type ID { check_new_var(); } ASSIGN expr SEMI {check_type_assign(get_type(var_table, lookup_var(var_table, id_string, scope)), $5, "=");}
-	| type ID LBRA INT_VAL RBRA ASSIGN LCBRA arg_list RCBRA SEMI {
-		Type res_type = primitive_to_array(type);
-		check_array_not_error(res_type);
-		type = res_type;
-		check_new_var();
+array_base_declaration
+	: type ID LBRA {
+		check_new_var(); new_array();
 	}
 	;
 
+declare_array
+	: array_base_declaration expr RBRA SEMI
+	| array_base_declaration INT_VAL RBRA ASSIGN LCBRA arg_list RCBRA SEMI
+	;
+
+declare_id
+	: type ID { check_new_var(); new_var(); } SEMI
+	| type ID { check_new_var(); new_var(); } ASSIGN expr SEMI {check_type_assign(type, $5, "=");}
+	//| array_base_declaration expr RBRA SEMI
+	//| array_base_declaration INT_VAL RBRA ASSIGN LCBRA arg_list RCBRA SEMI
+	;
+
 assign
-	: ID { check_var(); $$ = get_type(var_table, lookup_var(var_table, id_string, scope)); } ASSIGN expr SEMI {check_type_assign($2, $4, "=");}
-	| ID { check_var(); } LBRA expr RBRA ASSIGN expr SEMI {
+	: ID { int pos = check_var(); $$ = get_type(var_table, pos); } ASSIGN expr SEMI {check_type_assign($2, $4, "=");}
+	| ID { int pos = check_var();
+		Type res_type = get_type(var_table, pos);
+		if (res_type == ARRAY)
+			res_type = get_array_type(var_table, pos);
+		$$ = res_type; } LBRA expr RBRA ASSIGN expr SEMI {
 		check_array_position_type($4);
-		Type res_type = get_type(var_table, lookup_var(var_table, id_string, scope));
-		Type relative_type = array_to_primitive(res_type);
-		check_array_not_error(relative_type);
-		check_type_assign(relative_type, $7, "=");
-	}
+		check_type_assign($2, $7, "="); }
 	;
 
 expr
@@ -176,10 +186,11 @@ expr
 	| expr OVER expr {$$ = check_type_mul($1, $3, "/");}
 	| expr PLUS expr {$$ = check_type_sum($1, $3, "+");}
 	| expr MINUS expr {$$ = check_type_mul($1, $3, "-");}
-	| ID { check_var();
-		int pos = lookup_var(var_table, id_string, scope);
+	| ID { int pos = check_var();
 		Type res_type = get_type(var_table, pos);
-		$$ = array_to_primitive(res_type); } LBRA expr RBRA { check_array_position_type($4); }
+		if (res_type == ARRAY)
+			res_type = get_array_type(var_table, pos);
+		$$ = res_type; } LBRA expr RBRA { check_array_position_type($4); }
 	| func_call {$$ = $1;}
 	| INT_VAL {$$ = INT_TYPE;}
 	| FLOAT_VAL {$$ = REAL_TYPE;}
@@ -236,21 +247,26 @@ void check_new_func() {
 void new_var() {
     add_var(var_table, id_string, yylineno, type, scope);
 }
+void new_array() {
+    add_array(var_table, id_string, yylineno, type, scope, 0);
+}
 
-void check_var() {
-    if(lookup_var(var_table, id_string, scope) == -1) { // variable is used but do not exist
+int check_var() {
+	int pos = lookup_var(var_table, id_string, scope);
+    if(pos == -1) { // variable is used but do not exist
         printf("SEMANTIC ERROR (%d): variable '%s' was not declared.\n", yylineno, id_string);
         exit(EXIT_FAILURE);
     }
+	return pos;
 }
 
-void check_new_var() {
+int check_new_var() {
     int table_index = lookup_for_create_var(var_table, id_string, scope);
     if(table_index != -1) { // variable is declared but already exist
         printf("SEMANTIC ERROR (%d): variable '%s' already declared at line %d.\n", yylineno, id_string, get_line(var_table, table_index));
         exit(EXIT_FAILURE);
     }
-    new_var();
+	return table_index;
 }
 
 void type_error(Type type_left, Type type_right, char* op_str) {

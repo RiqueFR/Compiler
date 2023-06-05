@@ -7,13 +7,11 @@ typedef enum {
   REAL_TYPE,
   STR_TYPE,
   VOID_TYPE,
-  ARRAY_INT_TYPE,
-  ARRAY_REAL_TYPE,
-  ARRAY_STR_TYPE,
+  ARRAY,
   ERROR
 } Type;
 
-const char* get_text(Type type);
+const char *get_text(Type type);
 const int get_value(Type type);
 
 Type array_to_primitive(Type type);
