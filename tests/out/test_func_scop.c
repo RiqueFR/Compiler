@@ -5,8 +5,8 @@ Strings table:
 
 
 Func table:
-Entry 0 -- name: print, line: 3, type: void, scope: 0
-Entry 1 -- name: main, line: 11, type: int, scope: 0
+Entry 0 -- name: print, line: 3, return type: void, scope: 0, num params: 0
+Entry 1 -- name: main, line: 11, return type: int, scope: 0, num params: 2
 
 
 Var table:

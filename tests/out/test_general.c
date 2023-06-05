@@ -2,15 +2,14 @@ PARSE SUCCESSFUL!
 
 
 Strings table:
-Entry 0 -- "%s"
-Entry 1 -- "That is not a if, it is a char*"
+Entry 0 -- "That is not a if, it is a char*"
 
 
 Func table:
-Entry 0 -- name: printf, line: 1, type: void, scope: 0
-Entry 1 -- name: print, line: 5, type: void, scope: 0
-Entry 2 -- name: calcula, line: 9, type: int, scope: 0
-Entry 3 -- name: main, line: 14, type: int, scope: 0
+Entry 0 -- name: printf, line: 1, return type: void, scope: 0, num params: 0
+Entry 1 -- name: print, line: 5, return type: void, scope: 0, num params: 1
+Entry 2 -- name: calcula, line: 9, return type: int, scope: 0, num params: 2
+Entry 3 -- name: main, line: 14, return type: int, scope: 0, num params: 0
 
 
 Var table:

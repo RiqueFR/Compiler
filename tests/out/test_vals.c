@@ -15,7 +15,7 @@ Entry 9 -- "< > / * - + ! == { } [ ] ( ) "
 
 
 Func table:
-Entry 0 -- name: main, line: 1, type: int, scope: 0
+Entry 0 -- name: main, line: 1, return type: int, scope: 0, num params: 0
 
 
 Var table:

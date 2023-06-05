@@ -16,10 +16,10 @@
     void yyerror(char const *s);
     void new_func();
     void check_new_func();
-    void check_func();
+    int check_func();
     void new_var();
 	void new_array();
-    int check_new_var();
+    void check_new_var();
     int check_var();
 	void type_error(Type type_left, Type type_right, char* op_str);
 	Type check_type_sum(Type type_left, Type type_right, char* op_str);
@@ -30,6 +30,7 @@
 	void check_return(Type type_function, Type type_return);
 	void check_array_position_type(Type type);
 	void check_array_not_error(Type type);
+	void check_function_num_params(int func_num_params, int call_num_params);
     extern int yylineno;
     extern char* yytext;
     extern char id_string[500];
@@ -37,7 +38,10 @@
     int biggest_scope = 0;
     StrTable* str_table;
     VarTable* var_table;
-    VarTable* func_table;
+    FuncTable* func_table;
+	Type func_params[100];
+	int func_num_params;
+	int func_pos;
     Type type;
 %}
 
@@ -93,8 +97,8 @@ stmt
 	| declare_id
 	| declare_array
 	| func_call SEMI
-	| RETURN expr SEMI {check_return(get_type(func_table, scope - 1), $2);}
-	| RETURN SEMI {check_return(get_type(func_table, scope - 1), VOID_TYPE);}
+	| RETURN expr SEMI {check_return(get_func_type(func_table, scope - 1), $2);}
+	| RETURN SEMI {check_return(get_func_type(func_table, scope - 1), VOID_TYPE);}
 	;
 
 type
@@ -105,7 +109,10 @@ type
 	;
 
 func_declaration
-	: type ID { check_new_func(); biggest_scope++; scope = biggest_scope; } LPAR opt_param_type_list RPAR LCBRA stmt_list RCBRA { scope = 0; }
+	: type ID { check_new_func(); new_func();
+		biggest_scope++; scope = biggest_scope;
+		func_num_params = 0;
+		$$ = get_func_table_size(func_table)-1; } LPAR opt_param_type_list { add_func_params(func_table, $3, func_params, func_num_params);} RPAR LCBRA stmt_list RCBRA { scope = 0; }
 	;
 
 param_type
@@ -113,8 +120,8 @@ param_type
 	;
 
 param_type_list
-	: param_type
-	| param_type_list COMMA param_type
+	: param_type { func_params[func_num_params] = type; func_num_params++; }
+	| param_type_list COMMA param_type { func_params[func_num_params] = type; func_num_params++; }
 
 opt_param_type_list
 	: %empty
@@ -122,12 +129,14 @@ opt_param_type_list
 	;
 
 func_call
-	: ID { check_func(); $$ = get_type(func_table, lookup_var(func_table, id_string, scope)); } LPAR opt_arg_list RPAR {$$ = $2;}
+	: ID { func_pos = check_func(); func_num_params = 0;
+		$$ = get_func_type(func_table, func_pos); } LPAR opt_arg_list {
+		check_function_num_params(get_func_num_params(func_table, func_pos), func_num_params); } RPAR {$$ = $2;}
 	;
 
 arg_list
-	: expr
-	| arg_list COMMA expr
+	: expr { func_params[func_num_params] = type; func_num_params++; }
+	| arg_list COMMA expr { func_params[func_num_params] = type; func_num_params++; }
 	;
 
 opt_arg_list
@@ -202,19 +211,19 @@ expr
 int main() {
     str_table = create_str_table();
     var_table = create_var_table();
-    func_table = create_var_table();
+    func_table = create_func_table();
     if (yyparse() == 0) printf("PARSE SUCCESSFUL!\n");
     else                printf("PARSE FAILED!\n");
     printf("\n\n");
     print_str_table(str_table);
     printf("\n\n");
-    print_var_table("Func", func_table);
+    print_func_table("Func", func_table);
     printf("\n\n");
     print_var_table("Var", var_table);
     printf("\n\n");
     free_str_table(str_table);
     free_var_table(var_table);
-    free_var_table(func_table);
+    free_func_table(func_table);
     return 0;
 
 }
@@ -225,23 +234,24 @@ void yyerror (char const *s) {
 }
 
 void new_func() {
-    add_var(func_table, id_string, yylineno, type, scope);
+    add_func(func_table, id_string, yylineno, type, scope);
 }
 
-void check_func() {
-    if(lookup_var(func_table, id_string, scope) == -1) { // variable is used but do not exist
+int check_func() {
+	int pos = lookup_func(func_table, id_string, scope);
+    if(pos == -1) { // variable is used but do not exist
         printf("SEMANTIC ERROR (%d): variable '%s' was not declared.\n", yylineno, id_string);
         exit(EXIT_FAILURE);
     }
+	return pos;
 }
 
 void check_new_func() {
-    int table_index = lookup_for_create_var(func_table, id_string, scope);
+    int table_index = lookup_for_create_func(func_table, id_string, scope);
     if(table_index != -1) { // variable is declared but already exist
-        printf("SEMANTIC ERROR (%d): variable '%s' already declared at line %d.\n", yylineno, id_string, get_line(var_table, table_index));
+        printf("SEMANTIC ERROR (%d): variable '%s' already declared at line %d.\n", yylineno, id_string, get_func_line(func_table, table_index));
         exit(EXIT_FAILURE);
     }
-    new_func();
 }
 
 void new_var() {
@@ -260,13 +270,12 @@ int check_var() {
 	return pos;
 }
 
-int check_new_var() {
+void check_new_var() {
     int table_index = lookup_for_create_var(var_table, id_string, scope);
     if(table_index != -1) { // variable is declared but already exist
         printf("SEMANTIC ERROR (%d): variable '%s' already declared at line %d.\n", yylineno, id_string, get_line(var_table, table_index));
         exit(EXIT_FAILURE);
     }
-	return table_index;
 }
 
 void type_error(Type type_left, Type type_right, char* op_str) {
@@ -329,6 +338,13 @@ void check_array_position_type(Type type) {
 void check_array_not_error(Type type) {
 	if(type == ERROR) {
 		printf("SEMANTIC ERROR (%d): assign syntax should have a valid array, but it is type '%s'.\n", yylineno, get_text(type));
+		exit(EXIT_FAILURE);
+	}
+}
+
+void check_function_num_params(int func_num_params, int call_num_params) {
+	if(func_num_params != call_num_params) {
+		printf("SEMANTIC ERROR (%d): function call have '%d' arguments, but is expected to have '%d'.\n", yylineno, call_num_params, func_num_params);
 		exit(EXIT_FAILURE);
 	}
 }

@@ -3,7 +3,7 @@ void printf(){
 }
 
 void print( char* string) {
-	printf("%s", string);
+	printf();
 }
 
 int calcula(int x, int y){

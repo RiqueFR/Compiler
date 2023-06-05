@@ -5,10 +5,10 @@ Strings table:
 
 
 Func table:
-Entry 0 -- name: test, line: 1, type: int, scope: 0
-Entry 1 -- name: testa, line: 6, type: int, scope: 0
-Entry 2 -- name: main, line: 11, type: int, scope: 0
-Entry 3 -- name: t, line: 17, type: int, scope: 0
+Entry 0 -- name: test, line: 1, return type: int, scope: 0, num params: 1
+Entry 1 -- name: testa, line: 6, return type: int, scope: 0, num params: 1
+Entry 2 -- name: main, line: 11, return type: int, scope: 0, num params: 1
+Entry 3 -- name: t, line: 17, return type: int, scope: 0, num params: 1
 
 
 Var table:

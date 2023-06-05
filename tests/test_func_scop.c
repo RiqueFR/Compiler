@@ -12,7 +12,7 @@ int main(int argc, int x)
 {
 
     if (x > 10){
-        print(x);
+        print();
     }
     /* code */
     return 0;
