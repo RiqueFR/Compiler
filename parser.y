@@ -156,12 +156,12 @@ if_stmt
 array_base_declaration
 	: type ID LBRA {
 		check_new_var(); new_array();
-	}
+	} INT_VAL RBRA
 	;
 
 declare_array
-	: array_base_declaration expr RBRA SEMI
-	| array_base_declaration INT_VAL RBRA ASSIGN LCBRA arg_list RCBRA SEMI
+	: array_base_declaration SEMI
+	| array_base_declaration ASSIGN LCBRA arg_list RCBRA SEMI
 	;
 
 declare_id
