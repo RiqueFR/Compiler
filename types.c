@@ -2,33 +2,33 @@
 #include <stdio.h>
 #include "types.h"
 
-const Type SUM[5][5] = {
-	{INT_TYPE, 	REAL_TYPE, 	ERROR, 		ERROR, 	ERROR}, // int
-	{REAL_TYPE, REAL_TYPE, 	ERROR, 		ERROR, 	ERROR}, // float
-	{ERROR, 	ERROR, 		ERROR, 		ERROR, 	ERROR}, // char*
-	{ERROR, 	ERROR, 		ERROR, 		ERROR, 	ERROR}, // void
-	{ERROR, 	ERROR, 		ERROR, 		ERROR, 	ERROR}  // array
+const Unif SUM[5][5] = {
+	{{INT_TYPE, NONE, NONE}, {REAL_TYPE, I2F, NONE}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}}, // int
+	{{REAL_TYPE, NONE, I2F}, {REAL_TYPE, NONE, NONE}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}}, // float
+	{{ERROR, NONE, NONE}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}}, // char*
+	{{ERROR, NONE, NONE}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}}, // void
+	{{ERROR, NONE, NONE}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}}  // array
 };
-const Type MUL[7][7] = {
-	{INT_TYPE, 	REAL_TYPE, 	ERROR, 		ERROR, 	ERROR}, // int
-	{REAL_TYPE, REAL_TYPE, 	ERROR, 		ERROR, 	ERROR}, // float
-	{ERROR, 	ERROR, 		ERROR, 		ERROR, 	ERROR}, // char*
-	{ERROR, 	ERROR, 		ERROR, 		ERROR, 	ERROR}, // void
-	{ERROR, 	ERROR, 		ERROR, 		ERROR, 	ERROR}  // array
+const Unif MUL[7][7] = {
+	{{INT_TYPE, NONE, NONE}, {REAL_TYPE, I2F, NONE}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}}, // int
+	{{REAL_TYPE, NONE, I2F}, {REAL_TYPE, NONE, NONE}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}}, // float
+	{{ERROR, NONE, NONE}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}}, // char*
+	{{ERROR, NONE, NONE}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}}, // void
+	{{ERROR, NONE, NONE}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}}  // array
 };
-const Type OP[7][7] = {
-	{INT_TYPE, 	INT_TYPE, 	ERROR, 		ERROR, 	ERROR}, // int
-	{INT_TYPE, 	INT_TYPE, 	ERROR, 		ERROR, 	ERROR}, // float
-	{ERROR, 	ERROR, 		INT_TYPE, 	ERROR, 	ERROR}, // char*
-	{ERROR, 	ERROR, 		ERROR, 		ERROR, 	ERROR}, // void
-	{ERROR, 	ERROR, 		ERROR, 		ERROR, 	ERROR}  // array
+const Unif OP[7][7] = {
+	{{INT_TYPE, NONE, NONE}, {INT_TYPE, I2F, NONE}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}}, // int
+	{{INT_TYPE, NONE, I2F}, {INT_TYPE, NONE, NONE}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}}, // float
+	{{ERROR, NONE, NONE}, {ERROR, NONE, NONE}, {INT_TYPE, NONE, NONE}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}}, // char*
+	{{ERROR, NONE, NONE}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}}, // void
+	{{ERROR, NONE, NONE}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}}  // array
 };
-const Type ASSIGN_TABLE[7][7] = {
-	{INT_TYPE, 	INT_TYPE, 	ERROR, 		ERROR, 	ERROR}, // int
-	{REAL_TYPE, REAL_TYPE, 	ERROR, 		ERROR, 	ERROR}, // float
-	{ERROR, 	ERROR, 		STR_TYPE, 	ERROR, 	ERROR}, // char*
-	{ERROR, 	ERROR, 		ERROR, 		ERROR, 	ERROR}, // void
-	{ERROR, 	ERROR, 		ERROR, 		ERROR, 	ERROR}  // array
+const Unif ASSIGN_TABLE[7][7] = {
+	{{INT_TYPE, NONE, NONE}, {INT_TYPE, NONE, F2I}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}}, // int
+	{{REAL_TYPE, NONE, I2F}, {REAL_TYPE, NONE, NONE}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}}, // float
+	{{ERROR, NONE, NONE}, {ERROR, NONE, NONE}, {STR_TYPE, NONE, NONE}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}}, // char*
+	{{ERROR, NONE, NONE}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}}, // void
+	{{ERROR, NONE, NONE}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}, {ERROR, NONE, NONE}}  // array
 };
 
 static const char *TYPE_STRING[] = {
@@ -56,15 +56,15 @@ const int get_value(Type type) {
 	return TYPE_VALUE[type];
 }
 
-Type sum(Type type1, Type type2) {
+Unif sum(Type type1, Type type2) {
 	return SUM[get_value(type1)][get_value(type2)];
 }
-Type mul(Type type1, Type type2) {
+Unif mul(Type type1, Type type2) {
 	return MUL[get_value(type1)][get_value(type2)];
 }
-Type op(Type type1, Type type2) {
+Unif op(Type type1, Type type2) {
 	return OP[get_value(type1)][get_value(type2)];
 }
-Type assign(Type type1, Type type2) {
+Unif assign(Type type1, Type type2) {
 	return ASSIGN_TABLE[get_value(type1)][get_value(type2)];
 }
