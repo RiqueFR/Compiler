@@ -12,7 +12,7 @@ flex: scanner.l
 	flex scanner.l
 
 gcc: scanner.c parser.c
-	gcc -Wall -o $(EXEC) scanner.c parser.c types.c tables.c -ly
+	gcc -Wall -o $(EXEC) scanner.c parser.c types.c tables.c ast.c -ly
 
 test:
 	echo "Starting test"; \
