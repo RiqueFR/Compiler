@@ -6,9 +6,9 @@
 
 %{
     #include <string.h>
+    #include "ast.h"
     #include "parser.h" // For the token types from bison.
     #include "tables.h"
-    #include "ast.h"
     extern StrTable* str_table;
     char id_string[500];
     void new_string();

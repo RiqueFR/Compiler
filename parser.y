@@ -11,15 +11,16 @@
     #include <stdio.h>
     #include <stdlib.h>
     #include <string.h>
-    #include "tables.h"
     #include "ast.h"
+    #include "tables.h"
     int yylex(void);
+	int yylex_destroy(void);
     void yyerror(char const *s);
     void new_func();
     void check_new_func();
     int check_func();
-    void new_var();
-	void new_array();
+    int new_var();
+	int new_array();
     void check_new_var();
     int check_var();
 	void type_error(Type type_left, Type type_right, char* op_str);
@@ -28,7 +29,7 @@
     Type check_type_op(AST* type_left, AST* type_right, char* op_str);
     Type check_type_assign(AST* type_left, AST* type_right, char* op_str);
 	void check_condition(AST* type, char* condition);
-	void check_return(Type type_function, Type type_return);
+	void check_return(Type type_function, AST* ast_return);
 	void check_array_position_type(AST* type);
 	void check_array_not_error(AST* type);
 	void check_function_num_params(int func_num_params, int call_num_params);
@@ -74,8 +75,8 @@
 
 %%
 program
-	: program_stmt
-	| program program_stmt
+	: program_stmt { $$ = new_subtree(BLOCK_NODE, VOID, 1, $1); }
+	| program program_stmt { add_child($2, $1); $$ = $2; }
 	;
 
 program_stmt
@@ -85,24 +86,24 @@ program_stmt
 	;
 
 stmt_list
-	: %empty
-	| stmt_list_mult
+	: %empty { $$ = new_subtree(BLOCK_NODE, VOID, 0); }
+	| stmt_list_mult { $$ = $1; }
 	;
 
 stmt_list_mult
-	: stmt
-	| stmt_list_mult stmt
+	: stmt { $$ = new_subtree(BLOCK_NODE, VOID, 1, $1); }
+	| stmt_list_mult stmt { add_child($1, $2); $$ = $1; }
 	;
 
 stmt
-	: loop_stmt
-	| if_stmt
-	| assign
-	| declare_id
-	| declare_array
-	| func_call SEMI
-	| RETURN expr SEMI {check_return(get_func_type(func_table, scope - 1), $2);}
-	| RETURN SEMI {check_return(get_func_type(func_table, scope - 1), VOID_TYPE);}
+	: loop_stmt { $$ = $1; }
+	| if_stmt { $$ = $1; }
+	| assign { $$ = $1; }
+	| declare_id { $$ = $1; }
+	| declare_array { $$ = $1; }
+	| func_call SEMI { $$ = $1; }
+	| RETURN expr SEMI { check_return(get_func_type(func_table, scope - 1), $2); $$ = new_subtree(RETURN_NODE, VOID_TYPE, 1, $2); }
+	| RETURN SEMI { check_return(get_func_type(func_table, scope - 1), new_node(VOID_VAL_NODE, 0, VOID_TYPE)); $$ = new_node(RETURN_NODE, 0, VOID_TYPE); }
 	;
 
 type
@@ -116,7 +117,10 @@ func_declaration
 	: type ID { check_new_func(); new_func();
 		biggest_scope++; scope = biggest_scope;
 		func_num_params = 0;
-		$$ = get_func_table_size(func_table)-1; } LPAR opt_param_type_list { add_func_params(func_table, $3, func_params, func_num_params);} RPAR LCBRA stmt_list RCBRA { scope = 0; }
+		/*$$ = get_func_table_size(func_table)-1;*/
+		} LPAR opt_param_type_list {
+		/*add_func_params(func_table, $3, func_params, func_num_params);*/
+		} RPAR LCBRA stmt_list RCBRA { scope = 0; }
 	;
 
 param_type
@@ -134,8 +138,8 @@ opt_param_type_list
 
 func_call
 	: ID { func_pos = check_func(); func_num_params = 0;
-		$$ = get_func_type(func_table, func_pos); } LPAR opt_arg_list {
-		check_function_num_params(get_func_num_params(func_table, func_pos), func_num_params); } RPAR {$$ = $2;}
+		$1 = new_node(FUNC_USE_NODE, func_pos, get_func_type(func_table, func_pos)); } LPAR opt_arg_list {
+		check_function_num_params(get_func_num_params(func_table, func_pos), func_num_params); } RPAR {$$ = $1;}
 	;
 
 arg_list
@@ -149,12 +153,12 @@ opt_arg_list
 	;
 
 loop_stmt
-	: WHILE LPAR expr RPAR LCBRA stmt_list RCBRA {check_condition($3, "while");}
+	: WHILE LPAR expr RPAR LCBRA stmt_list RCBRA { check_condition($3, "while"); $$ = new_subtree(WHILE_NODE, VOID, 2, $3, $6); }
 	;
 
 if_stmt
-	: IF LPAR expr RPAR LCBRA stmt_list RCBRA ELSE LCBRA stmt_list RCBRA {check_condition($3, "if");}
-	| IF LPAR expr RPAR LCBRA stmt_list RCBRA {check_condition($3, "if");}
+	: IF LPAR expr RPAR LCBRA stmt_list RCBRA ELSE LCBRA stmt_list RCBRA { check_condition($3, "if"); $$ = new_subtree(IF_NODE, VOID, 3, $3, $6, $10); }
+	| IF LPAR expr RPAR LCBRA stmt_list RCBRA { check_condition($3, "if"); $$ = new_subtree(IF_NODE, VOID, 2, $3, $6); }
 	;
 
 array_base_declaration
@@ -169,21 +173,26 @@ declare_array
 	;
 
 declare_id
-	: type ID { check_new_var(); new_var(); } SEMI
-	| type ID { check_new_var(); new_var(); } ASSIGN expr SEMI {check_type_assign(type, $5, "=");}
+	: type ID { check_new_var(); int pos = new_var(); $1 = new_node(VAR_DECL_NODE, pos, get_type(var_table, pos)); } SEMI { $$ = $1; }
+	| type ID { check_new_var(); int pos = new_var(); $1 = new_node(VAR_DECL_NODE, pos, get_type(var_table, pos)); } ASSIGN expr SEMI {
+		check_type_assign($1, $5, "=");
+		$$ = new_subtree(ASSIGN_NODE, VOID, 2, $1, $5);
+	}
 	//| array_base_declaration expr RBRA SEMI
 	//| array_base_declaration INT_VAL RBRA ASSIGN LCBRA arg_list RCBRA SEMI
 	;
 
 assign
-	: ID { int pos = check_var(); $$ = get_type(var_table, pos); } ASSIGN expr SEMI {check_type_assign($2, $4, "=");}
+	: ID { int pos = check_var(); $1 = new_node(VAR_USE_NODE, pos, get_type(var_table, pos)); } ASSIGN expr SEMI { check_type_assign($1, $4, "="); $$ = new_subtree(ASSIGN_NODE, VOID, 2, $1, $4); }
 	| ID { int pos = check_var();
 		Type res_type = get_type(var_table, pos);
 		if (res_type == ARRAY)
 			res_type = get_array_type(var_table, pos);
-		$$ = res_type; } LBRA expr RBRA ASSIGN expr SEMI {
+		$1 = new_node(VAR_USE_NODE, pos, res_type); } LBRA expr RBRA ASSIGN expr SEMI {
 		check_array_position_type($4);
-		check_type_assign($2, $7, "="); }
+		check_type_assign($1, $7, "=");
+		$$ = new_subtree(ASSIGN_NODE, VOID, 2, $1, $7);
+		}
 	;
 
 expr
@@ -262,11 +271,11 @@ void check_new_func() {
     }
 }
 
-void new_var() {
-    add_var(var_table, id_string, yylineno, type, scope);
+int new_var() {
+    return add_var(var_table, id_string, yylineno, type, scope);
 }
-void new_array() {
-    add_array(var_table, id_string, yylineno, type, scope, 0);
+int new_array() {
+    return add_array(var_table, id_string, yylineno, type, scope, 0);
 }
 
 int check_var() {
@@ -292,59 +301,71 @@ void type_error(Type type_left, Type type_right, char* op_str) {
 	exit(EXIT_FAILURE);
 }
 
-Type check_type_sum(AST* type_left, AST* type_right, char* op_str) {
-    Type type = sum(get_node_type(type_left), get_node_type(type_right));
-    if(type == ERROR) {
-	    type_error(get_node_type(type_left), type_right, op_str);
+Type check_type_sum(AST* ast_left, AST* ast_right, char* op_str) {
+	Type type_left = get_node_type(ast_left);
+	Type type_right = get_node_type(ast_right);
+    Unif unif = sum(type_left, type_right);
+    if(unif.type == ERROR) {
+	    type_error(type_left, type_right, op_str);
 	}
-    return type;
+    return unif.type;
 }
-Type check_type_mul(AST* type_left, AST* type_right, char* op_str) {
-    Type type = mul(get_node_type(type_left), get_node_type(type_right));
-    if(type == ERROR) {
-	    type_error(get_node_type(type_left), type_right, op_str);
-    }   
-    return type;
+Type check_type_mul(AST* ast_left, AST* ast_right, char* op_str) {
+	Type type_left = get_node_type(ast_left);
+	Type type_right = get_node_type(ast_right);
+    Unif unif = mul(type_left, type_right);
+    if(unif.type == ERROR) {
+	    type_error(type_left, type_right, op_str);
+    }
+    return unif.type;
 }
-Type check_type_op(AST* type_left, AST* type_right, char* op_str) {
-    Type type = op(get_node_type(type_left), get_node_type(type_right));
-    if(type == ERROR) {
-	    type_error(get_node_type(type_left), type_right, op_str);
+Type check_type_op(AST* ast_left, AST* ast_right, char* op_str) {
+	Type type_left = get_node_type(ast_left);
+	Type type_right = get_node_type(ast_right);
+    Unif unif = op(type_left, type_right);
+    if(unif.type == ERROR) {
+	    type_error(type_left, type_right, op_str);
     }   
-    return type;
+    return unif.type;
 }
-Type check_type_assign(AST* type_left, AST* type_right, char* op_str) {
-    Type type = assign(get_node_type(type_left), get_node_type(type_right));
-    if(type == ERROR) {
-	    type_error(get_node_type(type_left), type_right, op_str);
+Type check_type_assign(AST* ast_left, AST* ast_right, char* op_str) {
+	Type type_left = get_node_type(ast_left);
+	Type type_right = get_node_type(ast_right);
+    Unif unif = assign(type_left, type_right);
+    if(unif.type == ERROR) {
+	    type_error(type_left, type_right, op_str);
     }   
-    return type;
+    return unif.type;
 }
 
-void check_condition(AST* type, char* condition) {
-    if(get_node_type(type) != INT_TYPE) {
+void check_condition(AST* ast, char* condition) {
+	Type type = get_node_type(ast);
+    if(type != INT_TYPE) {
         printf("SEMANTIC ERROR (%d): conditional expression in '%s' is '%s' instead of 'integer'.\n", yylineno, condition, get_text(type));
         exit(EXIT_FAILURE);
     }   
 }
 
-void check_return(Type type_function, Type type_return) {
-    Type type = assign(type_function, type_return);
-    if(!(type_function == VOID_TYPE && type_return == VOID_TYPE) && type == ERROR) {
+void check_return(Type type_function, AST* ast_return) {
+	Type type_return = get_node_type(ast_return);
+    Unif unif = assign(type_function, type_return);
+    if(!(type_function == VOID_TYPE && type_return == VOID_TYPE) && unif.type == ERROR) {
         printf("SEMANTIC ERROR (%d): return type is '%s' but function should return '%s'.\n", yylineno, get_text(type_return), get_text(type_function));
         exit(EXIT_FAILURE);
     }   
 }
 
-void check_array_position_type(AST* type) {
-	if(get_node_type(type) != INT_TYPE) {
+void check_array_position_type(AST* ast) {
+	Type type = get_node_type(ast);
+	if(type != INT_TYPE) {
 		printf("SEMANTIC ERROR (%d): array should access 'integer' position, but it was given '%s'.\n", yylineno, get_text(type));
 		exit(EXIT_FAILURE);
 	}
 }
 
-void check_array_not_error(AST* type) {
-	if(get_node_type(type) == ERROR) {
+void check_array_not_error(AST* ast) {
+	Type type = get_node_type(ast);
+	if(type == ERROR) {
 		printf("SEMANTIC ERROR (%d): assign syntax should have a valid array, but it is type '%s'.\n", yylineno, get_text(type));
 		exit(EXIT_FAILURE);
 	}

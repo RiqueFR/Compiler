@@ -97,48 +97,52 @@ void free_tree(AST *tree) {
 
 int nr;
 
-extern VarTable *vt;
+extern VarTable *var_table;
+extern FuncTable *func_table;
 
 char* kind2str(NodeKind kind) {
     switch(kind) {
-        case ASSIGN_NODE:   return ":=";
-        case EQ_NODE:       return "=";
-        case BLOCK_NODE:    return "block";
-        case BOOL_VAL_NODE: return "";
-        case IF_NODE:       return "if";
-        case INT_VAL_NODE:  return "";
-        case LT_NODE:       return "<";
-        case MINUS_NODE:    return "-";
-        case OVER_NODE:     return "/";
-        case PLUS_NODE:     return "+";
-        case PROGRAM_NODE:  return "program";
-        case READ_NODE:     return "read";
-        case REAL_VAL_NODE: return "";
-        case REPEAT_NODE:   return "repeat";
-        case STR_VAL_NODE:  return "";
-        case TIMES_NODE:    return "*";
-        case VAR_DECL_NODE: return "var_decl";
-        case VAR_LIST_NODE: return "var_list";
-        case VAR_USE_NODE:  return "var_use";
-        case WRITE_NODE:    return "write";
-        case B2I_NODE:      return "B2I";
-        case B2R_NODE:      return "B2R";
-        case B2S_NODE:      return "B2S";
-        case I2R_NODE:      return "I2R";
-        case I2S_NODE:      return "I2S";
-        case R2S_NODE:      return "R2S";
-        default:            return "ERROR!!";
+        case ASSIGN_NODE:   	return ":=";
+        case EQ_NODE:       	return "=";
+        case BLOCK_NODE:    	return "block";
+        case IF_NODE:       	return "if";
+        case INT_VAL_NODE:  	return "";
+        case LT_NODE:       	return "<";
+        case GT_NODE:       	return ">";
+        case NOT_NODE:      	return "!";
+        case NEG_NODE:      	return "--";
+        case AND_NODE:      	return "&&";
+        case OR_NODE:      		return "||";
+        case MINUS_NODE:    	return "-";
+        case OVER_NODE:     	return "/";
+        case PLUS_NODE:     	return "+";
+        case PROGRAM_NODE:  	return "program";
+        case FLOAT_VAL_NODE: 	return "";
+        case WHILE_NODE:   		return "repeat";
+        case STRING_VAL_NODE: 	return "";
+        case TIMES_NODE:    	return "*";
+        case FUNC_DECL_NODE: 	return "func_decl";
+        case RETURN_NODE: 		return "return";
+        case VAR_DECL_NODE: 	return "var_decl";
+        case VAR_LIST_NODE: 	return "var_list";
+        case VAR_USE_NODE:  	return "var_use";
+        case I2R_NODE:      	return "I2R";
+        case R2I_NODE:      	return "R2I";
+        default:            	return "ERROR!!";
     }
 }
 
 int has_data(NodeKind kind) {
     switch(kind) {
-        case BOOL_VAL_NODE:
+		case VOID_VAL_NODE:
         case INT_VAL_NODE:
-        case REAL_VAL_NODE:
-        case STR_VAL_NODE:
+        case FLOAT_VAL_NODE:
+        case STRING_VAL_NODE:
         case VAR_DECL_NODE:
         case VAR_USE_NODE:
+        case FUNC_DECL_NODE:
+        case FUNC_USE_NODE:
+        case ARRAY_USE_NODE:
             return 1;
         default:
             return 0;
@@ -149,20 +153,24 @@ int print_node_dot(AST *node) {
     int my_nr = nr++;
 
     fprintf(stderr, "node%d[label=\"", my_nr);
-    if (node->type != NO_TYPE) {
+    if (node->type != VOID_TYPE) {
         fprintf(stderr, "(%s) ", get_text(node->type));
     }
-    if (node->kind == VAR_DECL_NODE || node->kind == VAR_USE_NODE) {
-        fprintf(stderr, "%s@", get_name(vt, node->data.as_int));
-    } else {
+    if (node->kind == VAR_DECL_NODE || node->kind == VAR_USE_NODE || node->kind == ARRAY_USE_NODE) {
+        fprintf(stderr, "%s@", get_name(var_table, node->data.as_int));
+	} else if(node->kind == FUNC_DECL_NODE || node->kind == FUNC_USE_NODE) {
+        fprintf(stderr, "%s@", get_func_name(func_table, node->data.as_int));
+	} else {
         fprintf(stderr, "%s", kind2str(node->kind));
     }
     if (has_data(node->kind)) {
-        if (node->kind == REAL_VAL_NODE) {
+        if (node->kind == FLOAT_VAL_NODE) {
             fprintf(stderr, "%.2f", node->data.as_float);
-        } else if (node->kind == STR_VAL_NODE) {
+        } else if (node->kind == STRING_VAL_NODE) {
             fprintf(stderr, "@%d", node->data.as_int);
-        } else {
+		} else if (node->kind == VOID_VAL_NODE) {
+            fprintf(stderr, "@VOID");
+		} else {
             fprintf(stderr, "%d", node->data.as_int);
         }
     }
