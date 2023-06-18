@@ -6,3 +6,5 @@ scanner.c
 scanner.h
 parser.c
 parser.h
+out.dot
+out.pdf

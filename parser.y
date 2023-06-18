@@ -74,15 +74,19 @@
 %precedence UMINUS
 
 %%
+base
+	: program { program = new_subtree(PROGRAM_NODE, VOID_TYPE, 1, $1); }
+	;
+
 program
 	: program_stmt { $$ = new_subtree(BLOCK_NODE, VOID, 1, $1); }
-	| program program_stmt { add_child($2, $1); $$ = $2; }
+	| program program_stmt { add_child($1, $2); $$ = $1; }
 	;
 
 program_stmt
-	: func_declaration
-	| declare_id
-	| declare_array
+	: func_declaration { $$ = $1; }
+	| declare_id { $$ = $1; }
+	| declare_array { $$ = $1; }
 	;
 
 stmt_list
@@ -120,7 +124,7 @@ func_declaration
 		/*$$ = get_func_table_size(func_table)-1;*/
 		} LPAR opt_param_type_list {
 		/*add_func_params(func_table, $3, func_params, func_num_params);*/
-		} RPAR LCBRA stmt_list RCBRA { scope = 0; }
+		} RPAR LCBRA stmt_list RCBRA { scope = 0; $$ = $9; }
 	;
 
 param_type
@@ -163,13 +167,13 @@ if_stmt
 
 array_base_declaration
 	: type ID LBRA {
-		check_new_var(); new_array();
-	} INT_VAL RBRA
+		check_new_var(); int pos = new_array(); $1 = new_node(VAR_DECL_NODE, pos, get_type(var_table, pos));
+	} INT_VAL RBRA { $$ = $1; }
 	;
 
 declare_array
-	: array_base_declaration SEMI
-	| array_base_declaration ASSIGN LCBRA arg_list RCBRA SEMI
+	: array_base_declaration SEMI { $$ = $1; }
+	| array_base_declaration ASSIGN LCBRA arg_list RCBRA SEMI { $$ = $1; }
 	;
 
 declare_id
@@ -225,7 +229,6 @@ int main() {
     str_table = create_str_table();
     var_table = create_var_table();
     func_table = create_func_table();
-	program = new_subtree(PROGRAM_NODE, VOID, 0);
 
     if (yyparse() == 0) printf("PARSE SUCCESSFUL!\n");
     else                printf("PARSE FAILED!\n");
@@ -236,6 +239,8 @@ int main() {
     printf("\n\n");
     print_var_table("Var", var_table);
     printf("\n\n");
+	print_dot(program);
+
     free_str_table(str_table);
     free_var_table(var_table);
     free_func_table(func_table);

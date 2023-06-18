@@ -18,7 +18,7 @@ test:
 	echo "Starting test"; \
 	find $(TEST_FOLDER)/ -maxdepth 1 -type f -printf "%f\n" | while read file; do \
 		echo "Testing file: $$file" ; \
-		./$(EXEC) < $(TEST_FOLDER)/$$file | diff - $(TEST_OUT_FOLDER)/$$file ; \
+		./$(EXEC) < $(TEST_FOLDER)/$$file 2> /dev/null | diff - $(TEST_OUT_FOLDER)/$$file ; \
 	done; \
 	echo "Test DONE"
 

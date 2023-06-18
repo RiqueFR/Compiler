@@ -20,6 +20,43 @@ struct node {
     AST* child[CHILDREN_LIMIT];
 };
 
+static const char *KIND_STRING[] = {
+  "PROGRAM_NODE",
+  "BLOCK_NODE",
+  "WHILE_NODE",
+  "IF_NODE",
+  "ASSIGN_NODE",
+  "NOT_NODE",
+  "EQ_NODE",
+  "LT_NODE",
+  "GT_NODE",
+  "AND_NODE",
+  "OR_NODE",
+  "NEG_NODE",
+  "PLUS_NODE",
+  "MINUS_NODE",
+  "TIMES_NODE",
+  "OVER_NODE",
+  "FUNC_DECL_NODE",
+  "FUNC_USE_NODE",
+  "RETURN_NODE",
+  "VAR_DECL_NODE",
+  "VAR_LIST_NODE",
+  "VAR_USE_NODE",
+  "ARRAY_USE_NODE",
+  "INT_VAL_NODE",
+  "FLOAT_VAL_NODE",
+  "STRING_VAL_NODE",
+  "VOID_VAL_NODE",
+
+  "I2R_NODE",
+  "R2I_NODE"
+};
+
+const char* get_kind_text(NodeKind kind) {
+	return KIND_STRING[kind];
+}
+
 AST* new_node(NodeKind kind, int data, Type type) {
     AST* node = malloc(sizeof * node);
     node->kind = kind;
@@ -151,6 +188,7 @@ int has_data(NodeKind kind) {
 
 int print_node_dot(AST *node) {
     int my_nr = nr++;
+	/*printf("%s num_child: %d\n", get_kind_text(node->kind), node->count);*/
 
     fprintf(stderr, "node%d[label=\"", my_nr);
     if (node->type != VOID_TYPE) {
