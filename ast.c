@@ -158,11 +158,13 @@ char* kind2str(NodeKind kind) {
         case WHILE_NODE:   		return "repeat";
         case STRING_VAL_NODE: 	return "";
         case TIMES_NODE:    	return "*";
+		case VOID_VAL_NODE:     return "";
         case FUNC_DECL_NODE: 	return "func_decl";
         case RETURN_NODE: 		return "return";
         case VAR_DECL_NODE: 	return "var_decl";
         case VAR_LIST_NODE: 	return "var_list";
         case VAR_USE_NODE:  	return "var_use";
+        case ARRAY_USE_NODE:  	return "array_use";
         case I2R_NODE:      	return "I2R";
         case R2I_NODE:      	return "R2I";
         default:            	return "ERROR!!";
@@ -179,7 +181,6 @@ int has_data(NodeKind kind) {
         case VAR_USE_NODE:
         case FUNC_DECL_NODE:
         case FUNC_USE_NODE:
-        case ARRAY_USE_NODE:
             return 1;
         default:
             return 0;
@@ -191,10 +192,10 @@ int print_node_dot(AST *node) {
 	/*printf("%s num_child: %d\n", get_kind_text(node->kind), node->count);*/
 
     fprintf(stderr, "node%d[label=\"", my_nr);
-    if (node->type != VOID_TYPE) {
+    /*if (node->type != VOID_TYPE) {*/
         fprintf(stderr, "(%s) ", get_text(node->type));
-    }
-    if (node->kind == VAR_DECL_NODE || node->kind == VAR_USE_NODE || node->kind == ARRAY_USE_NODE) {
+    /*}*/
+	if (node->kind == VAR_DECL_NODE || node->kind == VAR_USE_NODE) {
         fprintf(stderr, "%s@", get_name(var_table, node->data.as_int));
 	} else if(node->kind == FUNC_DECL_NODE || node->kind == FUNC_USE_NODE) {
         fprintf(stderr, "%s@", get_func_name(func_table, node->data.as_int));

@@ -16,7 +16,7 @@
     int yylex(void);
 	int yylex_destroy(void);
     void yyerror(char const *s);
-    void new_func();
+    int new_func();
     void check_new_func();
     int check_func();
     int new_var();
@@ -79,7 +79,7 @@ base
 	;
 
 program
-	: program_stmt { $$ = new_subtree(BLOCK_NODE, VOID, 1, $1); }
+	: program_stmt { $$ = new_subtree(BLOCK_NODE, VOID_TYPE, 1, $1); }
 	| program program_stmt { add_child($1, $2); $$ = $1; }
 	;
 
@@ -90,12 +90,12 @@ program_stmt
 	;
 
 stmt_list
-	: %empty { $$ = new_subtree(BLOCK_NODE, VOID, 0); }
+	: %empty { $$ = new_subtree(BLOCK_NODE, VOID_TYPE, 0); }
 	| stmt_list_mult { $$ = $1; }
 	;
 
 stmt_list_mult
-	: stmt { $$ = new_subtree(BLOCK_NODE, VOID, 1, $1); }
+	: stmt { $$ = new_subtree(BLOCK_NODE, VOID_TYPE, 1, $1); }
 	| stmt_list_mult stmt { add_child($1, $2); $$ = $1; }
 	;
 
@@ -118,26 +118,26 @@ type
 	;
 
 func_declaration
-	: type ID { check_new_func(); new_func();
+	: type ID { check_new_func(); int pos = new_func();
 		biggest_scope++; scope = biggest_scope;
 		func_num_params = 0;
-		/*$$ = get_func_table_size(func_table)-1;*/
+		$1 = new_node(FUNC_DECL_NODE, pos, get_func_type(func_table, pos));
 		} LPAR opt_param_type_list {
-		/*add_func_params(func_table, $3, func_params, func_num_params);*/
-		} RPAR LCBRA stmt_list RCBRA { scope = 0; $$ = $9; }
+		add_func_params(func_table, get_data($1), func_params, func_num_params);
+		} RPAR LCBRA stmt_list RCBRA { scope = 0; add_child($1, $5); add_child($1, $9); $$ = $1; }
 	;
 
 param_type
-	: type ID { check_new_var(); new_var(); }
+	: type ID { check_new_var(); int pos = new_var(); $$ = new_node(VAR_DECL_NODE, pos, get_type(var_table, pos)); }
 	;
 
 param_type_list
-	: param_type { func_params[func_num_params] = type; func_num_params++; }
-	| param_type_list COMMA param_type { func_params[func_num_params] = type; func_num_params++; }
+	: param_type { func_params[func_num_params] = type; func_num_params++; $$ = new_subtree(VAR_LIST_NODE, VOID_TYPE, 1, $1); }
+	| param_type_list COMMA param_type { func_params[func_num_params] = type; func_num_params++; add_child($1, $3); $$ = $1; }
 
 opt_param_type_list
-	: %empty
-	| param_type_list
+	: %empty { $$ = new_subtree(VAR_LIST_NODE, VOID_TYPE, 0); }
+	| param_type_list { $$ = $1; }
 	;
 
 func_call
@@ -157,12 +157,12 @@ opt_arg_list
 	;
 
 loop_stmt
-	: WHILE LPAR expr RPAR LCBRA stmt_list RCBRA { check_condition($3, "while"); $$ = new_subtree(WHILE_NODE, VOID, 2, $3, $6); }
+	: WHILE LPAR expr RPAR LCBRA stmt_list RCBRA { check_condition($3, "while"); $$ = new_subtree(WHILE_NODE, VOID_TYPE, 2, $3, $6); }
 	;
 
 if_stmt
-	: IF LPAR expr RPAR LCBRA stmt_list RCBRA ELSE LCBRA stmt_list RCBRA { check_condition($3, "if"); $$ = new_subtree(IF_NODE, VOID, 3, $3, $6, $10); }
-	| IF LPAR expr RPAR LCBRA stmt_list RCBRA { check_condition($3, "if"); $$ = new_subtree(IF_NODE, VOID, 2, $3, $6); }
+	: IF LPAR expr RPAR LCBRA stmt_list RCBRA ELSE LCBRA stmt_list RCBRA { check_condition($3, "if"); $$ = new_subtree(IF_NODE, VOID_TYPE, 3, $3, $6, $10); }
+	| IF LPAR expr RPAR LCBRA stmt_list RCBRA { check_condition($3, "if"); $$ = new_subtree(IF_NODE, VOID_TYPE, 2, $3, $6); }
 	;
 
 array_base_declaration
@@ -180,14 +180,14 @@ declare_id
 	: type ID { check_new_var(); int pos = new_var(); $1 = new_node(VAR_DECL_NODE, pos, get_type(var_table, pos)); } SEMI { $$ = $1; }
 	| type ID { check_new_var(); int pos = new_var(); $1 = new_node(VAR_DECL_NODE, pos, get_type(var_table, pos)); } ASSIGN expr SEMI {
 		check_type_assign($1, $5, "=");
-		$$ = new_subtree(ASSIGN_NODE, VOID, 2, $1, $5);
+		$$ = new_subtree(ASSIGN_NODE, VOID_TYPE, 2, $1, $5);
 	}
 	//| array_base_declaration expr RBRA SEMI
 	//| array_base_declaration INT_VAL RBRA ASSIGN LCBRA arg_list RCBRA SEMI
 	;
 
 assign
-	: ID { int pos = check_var(); $1 = new_node(VAR_USE_NODE, pos, get_type(var_table, pos)); } ASSIGN expr SEMI { check_type_assign($1, $4, "="); $$ = new_subtree(ASSIGN_NODE, VOID, 2, $1, $4); }
+	: ID { int pos = check_var(); $1 = new_node(VAR_USE_NODE, pos, get_type(var_table, pos)); } ASSIGN expr SEMI { check_type_assign($1, $4, "="); $$ = new_subtree(ASSIGN_NODE, VOID_TYPE, 2, $1, $4); }
 	| ID { int pos = check_var();
 		Type res_type = get_type(var_table, pos);
 		if (res_type == ARRAY)
@@ -195,7 +195,7 @@ assign
 		$1 = new_node(VAR_USE_NODE, pos, res_type); } LBRA expr RBRA ASSIGN expr SEMI {
 		check_array_position_type($4);
 		check_type_assign($1, $7, "=");
-		$$ = new_subtree(ASSIGN_NODE, VOID, 2, $1, $7);
+		$$ = new_subtree(ASSIGN_NODE, VOID_TYPE, 2, $1, $7);
 		}
 	;
 
@@ -212,11 +212,16 @@ expr
 	| expr OVER expr { $$ = new_subtree(OVER_NODE, check_type_mul($1, $3, "/"), 2, $1, $3); }
 	| expr PLUS expr { $$ = new_subtree(PLUS_NODE, check_type_sum($1, $3, "+"), 2, $1, $3); }
 	| expr MINUS expr { $$ = new_subtree(MINUS_NODE, check_type_mul($1, $3, "-"), 2, $1, $3); }
-	| ID { int pos = check_var();
+	| ID {
+	    int pos = check_var();
+		$1 = new_node(VAR_USE_NODE, pos, ARRAY); }
+	  LBRA expr RBRA {
+		int pos = get_data($1);
 		Type res_type = get_type(var_table, pos);
 		if (res_type == ARRAY)
 			res_type = get_array_type(var_table, pos);
-		$1 = new_node(VAR_USE_NODE, pos, res_type); } LBRA expr RBRA { check_array_position_type($4); $$ = new_subtree(ARRAY_USE_NODE, ARRAY, 2, $1, $4); }
+		check_array_position_type($4); $$ = new_subtree(ARRAY_USE_NODE, res_type, 2, $1, $4);
+		}
 	| func_call { $$ = $1; }
 	| INT_VAL { $$ = new_node(INT_VAL_NODE, atoi(yytext), INT_TYPE); }
 	| FLOAT_VAL { AST* node = new_node(FLOAT_VAL_NODE, 0, REAL_TYPE); set_float_data(node, atof(yytext)); $$ = node; }
@@ -255,8 +260,8 @@ void yyerror (char const *s) {
 	exit(EXIT_FAILURE);
 }
 
-void new_func() {
-    add_func(func_table, id_string, yylineno, type, scope);
+int new_func() {
+    return add_func(func_table, id_string, yylineno, type, scope);
 }
 
 int check_func() {
