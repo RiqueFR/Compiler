@@ -159,6 +159,7 @@ typedef struct {
   int line;
   Type type;
   Type *param_types;
+  AST* ast_start;
   int num_param;
 } FuncEntry;
 
@@ -229,6 +230,14 @@ int get_func_scope(FuncTable* vt, int i) {
 
 int get_func_num_params(FuncTable* vt, int i) {
     return vt->t[i].num_param;
+}
+
+void set_func_ast_start(FuncTable* ft, int i, AST* ast) {
+	ft->t[i].ast_start = ast;
+}
+
+AST* get_func_ast_start(FuncTable* ft, int i) {
+	return ft->t[i].ast_start;
 }
 
 void print_func_table(char* name, FuncTable* vt) {

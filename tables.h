@@ -3,6 +3,7 @@
 #define TABLES_H
 
 #include "types.h"
+#include "ast.h"
 
 // Strings Table
 // ----------------------------------------------------------------------------
@@ -133,6 +134,10 @@ Type get_func_type(FuncTable *vt, int i);
 int get_func_scope(FuncTable *vt, int i);
 
 int get_func_num_params(FuncTable* vt, int i);
+
+void set_func_ast_start(FuncTable* ft, int i, AST* ast);
+
+AST* get_func_ast_start(FuncTable* ft, int i);
 
 // Prints the given table to stdout.
 void print_func_table(char *name, FuncTable *vt);

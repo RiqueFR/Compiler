@@ -12,6 +12,8 @@ extern StrTable *str_table;
 extern VarTable *var_table;
 extern FuncTable *func_table;
 
+AST* main_ast = NULL;
+
 typedef union {
     int   as_int;
     float as_float;
@@ -91,7 +93,7 @@ void init_mem() {
 
 // ----------------------------------------------------------------------------
 
-/*#define TRACE*/
+#define TRACE
 #ifdef TRACE
 #define trace(msg) printf("TRACE: %s\n", msg)
 #else
@@ -218,9 +220,16 @@ void run_eq(AST *ast) {
 	}
 }
 
-void run_func_decl(AST* ast) {}
+void run_func_decl(AST* ast) {
+	trace("func_decl");
+	int func_idx = get_data(ast);
+	if (!strcmp(get_func_name(func_table, func_idx), "main")) main_ast = ast;
+	set_func_ast_start(func_table, func_idx, ast);
+}
 
-void run_func_use(AST* ast) {}
+void run_func_use(AST* ast) {
+	trace("func_use");
+}
 
 void run_if(AST *ast) {
 	trace("if");
@@ -331,8 +340,9 @@ void run_plus(AST *ast) {
 
 void run_program(AST *ast) {
     trace("program");
-    rec_run_ast(get_child(ast, 0)); // run var_list
-    /*rec_run_ast(get_child(ast, 1)); // run block*/
+    /*rec_run_ast(get_child(ast, 0)); // run var_list*/
+	rec_run_ast(get_child(ast, 0)); // run block
+	rec_run_ast(main_ast);
 }
 
 void run_read(AST *ast) {
