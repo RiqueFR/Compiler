@@ -12,7 +12,9 @@
     #include <stdlib.h>
     #include <string.h>
     #include "ast.h"
-    #include "tables.h"
+	#include "tables.h"
+	#include "interpreter.h"
+
     int yylex(void);
 	int yylex_destroy(void);
     void yyerror(char const *s);
@@ -245,6 +247,10 @@ int main() {
     print_var_table("Var", var_table);
     printf("\n\n");
 	print_dot(program);
+
+	stdin = fopen(ctermid(NULL), "r");
+	run_ast(program);
+	fclose(stdin);
 
     free_str_table(str_table);
     free_var_table(var_table);
