@@ -174,7 +174,23 @@ void write_str() {
 
 // ----------------------------------------------------------------------------
 
-void run_and(AST* ast) {}
+void run_and(AST* ast) {
+	trace("and");
+	AST* expr_ast = get_child(ast, 0);
+	rec_run_ast(expr_ast);
+	rec_run_ast(get_child(ast, 1));
+	switch(get_node_type(expr_ast)) {
+		case INT_TYPE:
+			int val_int2 = popi();
+			pushi(popi() && val_int2);
+			break;
+		case REAL_TYPE:
+			float val_float2 = popf();
+			pushi(popf() && val_float2);
+			break;
+		default:;
+	}
+}
 
 void run_array_use(AST* ast) {}
 
@@ -303,11 +319,57 @@ void run_minus(AST *ast) {
 	}
 }
 
-void run_neg(AST* ast) {}
+void run_neg(AST* ast) {
+	trace("neg");
+	AST* expr_ast = get_child(ast, 0);
+	rec_run_ast(expr_ast);
+	switch(get_node_type(expr_ast)) {
+		case INT_TYPE:
+			int val_int2 = popi();
+			pushi(-popi());
+			break;
+		case REAL_TYPE:
+			float val_float2 = popf();
+			pushi(-popf());
+			break;
+		default:;
+	}
+}
 
-void run_not(AST* ast) {}
+void run_not(AST* ast) {
+	trace("not");
+	AST* expr_ast = get_child(ast, 0);
+	rec_run_ast(expr_ast);
+	switch(get_node_type(expr_ast)) {
+		case INT_TYPE:
+			int val_int2 = popi();
+			pushi(!popi());
+			break;
+		case REAL_TYPE:
+			float val_float2 = popf();
+			pushi(!popf());
+			break;
+		default:;
+	}
+}
 
-void run_or(AST* ast) {}
+void run_or(AST* ast) {
+	trace("or");
+	AST* expr_ast = get_child(ast, 0);
+	rec_run_ast(expr_ast);
+	rec_run_ast(get_child(ast, 1));
+	switch(get_node_type(expr_ast)) {
+		case INT_TYPE:
+			int val_int2 = popi();
+			pushi(popi() || val_int2);
+			break;
+		case REAL_TYPE:
+			float val_float2 = popf();
+			pushi(popf() || val_float2);
+			break;
+		default:;
+	}
+}
 
 void run_over(AST *ast) {
 	trace("over");
@@ -427,7 +489,10 @@ void run_var_use(AST *ast) {
 		pushi(loadi(idx));
 }
 
-void run_void_val(AST* ast) {}
+void run_void_val(AST* ast) {
+	trace("void_val");
+	// Do nothing
+}
 
 void run_write(AST *ast) {
 	trace("write");
