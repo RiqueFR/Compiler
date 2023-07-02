@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "ast.h"
 #include "interpreter.h"
 #include "tables.h"
 #include "types.h"
@@ -229,6 +230,8 @@ void run_func_decl(AST* ast) {
 
 void run_func_use(AST* ast) {
 	trace("func_use");
+	// run called function
+	rec_run_ast(get_child(get_func_ast_start(func_table, get_data(ast)), 1));
 }
 
 void run_if(AST *ast) {
@@ -340,9 +343,9 @@ void run_plus(AST *ast) {
 
 void run_program(AST *ast) {
     trace("program");
-    /*rec_run_ast(get_child(ast, 0)); // run var_list*/
 	rec_run_ast(get_child(ast, 0)); // run block
-	rec_run_ast(main_ast);
+	// run main block node
+	rec_run_ast(get_child(main_ast, 1));
 }
 
 void run_read(AST *ast) {
@@ -368,7 +371,11 @@ void run_real_val(AST *ast) {
 	pushf(get_float_data(ast));
 }
 
-void run_return(AST* ast) {}
+void run_return(AST* ast) {
+	trace("return");
+	if(get_child_count(ast) > 0)
+		rec_run_ast(get_child(ast, 0));
+}
 
 void run_while(AST *ast) {
 	trace("while");
