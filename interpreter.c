@@ -345,6 +345,7 @@ void run_program(AST *ast) {
     trace("program");
 	rec_run_ast(get_child(ast, 0)); // run block
 	// run main block node
+	trace("main");
 	rec_run_ast(get_child(main_ast, 1));
 }
 
@@ -379,9 +380,11 @@ void run_return(AST* ast) {
 
 void run_while(AST *ast) {
 	trace("while");
-	rec_run_ast(get_child(ast, 0));
+	AST* condition_ast = get_child(ast, 0);
+	rec_run_ast(condition_ast);
 	while(popi()) {
 		rec_run_ast(get_child(ast, 1));
+		rec_run_ast(condition_ast);
 	} 
 }
 
@@ -391,7 +394,7 @@ void run_str_val(AST *ast) {
 }
 
 void run_times(AST *ast) {
-	trace("plus");
+	trace("times");
 	rec_run_ast(get_child(ast, 0));
 	rec_run_ast(get_child(ast, 1));
 	switch(get_node_type(ast)) {
