@@ -157,6 +157,7 @@ typedef struct {
   char name[FUNCTION_MAX_SIZE];
   int scope;
   int line;
+  int builtin;
   Type type;
   Type *param_types;
   AST* ast_start;
@@ -167,12 +168,6 @@ struct func_table {
     FuncEntry t[FUNCTION_TABLE_MAX_SIZE];
     int size;
 };
-
-FuncTable* create_func_table() {
-    FuncTable *vt = malloc(sizeof * vt);
-    vt->size = 0;
-    return vt;
-}
 
 int get_func_table_size(FuncTable* vt) {
 	return vt->size;
@@ -197,12 +192,19 @@ int lookup_func(FuncTable* vt, char* s, int scope) {
     return -1;
 }
 
+int add_func_builtin(FuncTable* vt, char* s, int line, Type type, int scope) {
+	int pos = add_func(vt, s, line, type, scope);
+	vt->t[pos].builtin = 1;
+	return pos;
+}
+
 int add_func(FuncTable* vt, char* s, int line, Type type, int scope) {
     strcpy(vt->t[vt->size].name, s);
     vt->t[vt->size].line = line;
     vt->t[vt->size].type = type;
     vt->t[vt->size].scope = scope;
     int idx_added = vt->size;
+	vt->t[vt->size].builtin = 0;
     vt->size++;
     return idx_added;
 }
@@ -210,6 +212,9 @@ int add_func(FuncTable* vt, char* s, int line, Type type, int scope) {
 void add_func_params(FuncTable* vt, int i, Type *param_types, int num_param) {
     vt->t[i].num_param = num_param;
     vt->t[i].param_types = malloc(num_param * sizeof(Type));
+	for(int i = 0; i < num_param; i++) {
+		vt->t[i].param_types[i] = param_types[i];
+	}
 }
 
 char* get_func_name(FuncTable* vt, int i) {
@@ -238,6 +243,31 @@ void set_func_ast_start(FuncTable* ft, int i, AST* ast) {
 
 AST* get_func_ast_start(FuncTable* ft, int i) {
 	return ft->t[i].ast_start;
+}
+
+int get_func_is_builtin(FuncTable* ft, int i) {
+	return ft->t[i].builtin;
+}
+
+void add_builtin_functions(FuncTable* ft) {
+	int pos = add_func_builtin(ft, "printf", 0, VOID_TYPE, 0);
+	Type args[] = {STR_TYPE};
+	add_func_params(ft, pos, args, 1);
+
+	pos = add_func_builtin(ft, "itoa", 0, STR_TYPE, 0);
+	args[0] = INT_TYPE;
+	add_func_params(ft, pos, args, 1);
+
+	pos = add_func_builtin(ft, "itof", 0, STR_TYPE, 0);
+	args[0] = REAL_TYPE;
+	add_func_params(ft, pos, args, 1);
+}
+
+FuncTable* create_func_table() {
+    FuncTable *ft = malloc(sizeof * ft);
+    ft->size = 0;
+	add_builtin_functions(ft);
+    return ft;
 }
 
 void print_func_table(char* name, FuncTable* vt) {

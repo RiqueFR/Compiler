@@ -48,6 +48,7 @@
 	int func_pos;
     Type type;
 	AST* program;
+	AST* func_call_node;
 %}
 
 %define api.value.type {AST*}
@@ -108,8 +109,8 @@ stmt
 	| declare_id { $$ = $1; }
 	| declare_array { $$ = $1; }
 	| func_call SEMI { $$ = $1; }
-	| RETURN expr SEMI { check_return(get_func_type(func_table, scope - 1), $2); $$ = new_subtree(RETURN_NODE, VOID_TYPE, 1, $2); }
-	| RETURN SEMI { check_return(get_func_type(func_table, scope - 1), new_node(VOID_VAL_NODE, 0, VOID_TYPE)); $$ = new_node(RETURN_NODE, 0, VOID_TYPE); }
+	| RETURN expr SEMI { check_return(get_func_type(func_table, scope), $2); $$ = new_subtree(RETURN_NODE, VOID_TYPE, 1, $2); }
+	| RETURN SEMI { check_return(get_func_type(func_table, scope), new_node(VOID_VAL_NODE, 0, VOID_TYPE)); $$ = new_node(RETURN_NODE, 0, VOID_TYPE); }
 	;
 
 type
@@ -121,7 +122,8 @@ type
 
 func_declaration
 	: type ID { check_new_func(); int pos = new_func();
-		biggest_scope++; scope = biggest_scope;
+		/*biggest_scope++; scope = biggest_scope;*/
+		scope = pos;
 		func_num_params = 0;
 		$1 = new_node(FUNC_DECL_NODE, pos, get_func_type(func_table, pos));
 		} LPAR opt_param_type_list {
@@ -144,13 +146,13 @@ opt_param_type_list
 
 func_call
 	: ID { func_pos = check_func(); func_num_params = 0;
-		$1 = new_node(FUNC_USE_NODE, func_pos, get_func_type(func_table, func_pos)); } LPAR opt_arg_list {
+		func_call_node = new_node(FUNC_USE_NODE, func_pos, get_func_type(func_table, func_pos)); $1 = func_call_node; } LPAR opt_arg_list {
 		check_function_num_params(get_func_num_params(func_table, func_pos), func_num_params); } RPAR {$$ = $1;}
 	;
 
 arg_list
-	: expr { func_params[func_num_params] = type; func_num_params++; }
-	| arg_list COMMA expr { func_params[func_num_params] = type; func_num_params++; }
+	: expr { func_params[func_num_params] = type; func_num_params++; add_child(func_call_node, $1); }
+	| arg_list COMMA expr { func_params[func_num_params] = type; func_num_params++; add_child(func_call_node, $3); }
 	;
 
 opt_arg_list

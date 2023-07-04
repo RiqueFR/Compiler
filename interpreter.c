@@ -244,10 +244,34 @@ void run_func_decl(AST* ast) {
 	set_func_ast_start(func_table, func_idx, ast);
 }
 
+void run_printf(AST *ast) {
+	trace("print");
+	AST* expr_ast = get_child(ast, 0);
+	rec_run_ast(expr_ast);
+	switch(get_node_type(expr_ast)) {
+		case INT_TYPE:
+			write_int();
+			break;
+		case REAL_TYPE:
+			write_real();
+			break;
+		case STR_TYPE:
+			write_str();
+			break;
+		default:;
+	}
+}
+
 void run_func_use(AST* ast) {
 	trace("func_use");
 	// run called function
-	rec_run_ast(get_child(get_func_ast_start(func_table, get_data(ast)), 1));
+	int data = get_data(ast);
+	if(get_func_is_builtin(func_table, data)) {
+		if(!strcmp(get_func_name(func_table, data), "printf"))
+			run_printf(ast);
+	} else {
+		rec_run_ast(get_child(get_func_ast_start(func_table, data), 1));
+	}
 }
 
 void run_if(AST *ast) {
@@ -325,11 +349,9 @@ void run_neg(AST* ast) {
 	rec_run_ast(expr_ast);
 	switch(get_node_type(expr_ast)) {
 		case INT_TYPE:
-			int val_int2 = popi();
 			pushi(-popi());
 			break;
 		case REAL_TYPE:
-			float val_float2 = popf();
 			pushi(-popf());
 			break;
 		default:;
@@ -342,11 +364,9 @@ void run_not(AST* ast) {
 	rec_run_ast(expr_ast);
 	switch(get_node_type(expr_ast)) {
 		case INT_TYPE:
-			int val_int2 = popi();
 			pushi(!popi());
 			break;
 		case REAL_TYPE:
-			float val_float2 = popf();
 			pushi(!popf());
 			break;
 		default:;
@@ -494,24 +514,6 @@ void run_void_val(AST* ast) {
 	// Do nothing
 }
 
-void run_write(AST *ast) {
-	trace("write");
-	AST* expr_ast = get_child(ast, 0);
-	rec_run_ast(expr_ast);
-	switch(get_node_type(expr_ast)) {
-		case INT_TYPE:
-			write_int();
-			break;
-		case REAL_TYPE:
-			write_real();
-			break;
-		case STR_TYPE:
-			write_str();
-			break;
-		default:;
-	}
-}
-
 void run_i2r(AST* ast) {
     rec_run_ast(get_child(ast, 0));
 	pushf((float)popi());
@@ -552,7 +554,7 @@ void rec_run_ast(AST *ast) {
         case VAR_USE_NODE: 		run_var_use(ast); 	break;
         case VOID_VAL_NODE: 	run_void_val(ast); 	break;
         case WHILE_NODE: 		run_while(ast); 	break;
-        /*case WRITE_NODE: 		run_write(ast); 	break;*/
+        /*case PRINTF_NODE: 		run_printf(ast); 	break;*/
 
         case I2R_NODE: 			run_i2r(ast); 		break;
         case R2I_NODE: 			run_r2i(ast); 		break;

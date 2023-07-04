@@ -139,6 +139,8 @@ void set_func_ast_start(FuncTable* ft, int i, AST* ast);
 
 AST* get_func_ast_start(FuncTable* ft, int i);
 
+int get_func_is_builtin(FuncTable* ft, int i);
+
 // Prints the given table to stdout.
 void print_func_table(char *name, FuncTable *vt);
 
