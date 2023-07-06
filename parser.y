@@ -122,8 +122,8 @@ type
 
 func_declaration
 	: type ID { check_new_func(); int pos = new_func();
-		/*biggest_scope++; scope = biggest_scope;*/
-		scope = pos;
+		// scope is func position + 1, scope 0 is global scope
+		scope = pos + 1;
 		func_num_params = 0;
 		$1 = new_node(FUNC_DECL_NODE, pos, get_func_type(func_table, pos));
 		} LPAR opt_param_type_list {
@@ -290,7 +290,9 @@ void check_new_func() {
 }
 
 int new_var() {
-    return add_var(var_table, id_string, yylineno, type, scope);
+	int relative_pos = get_func_num_vars(func_table, scope);
+	add_var_to_func(func_table, scope);
+    return add_var(var_table, id_string, yylineno, type, scope, relative_pos);
 }
 int new_array() {
     return add_array(var_table, id_string, yylineno, type, scope, 0);

@@ -2,8 +2,8 @@
 #ifndef TABLES_H
 #define TABLES_H
 
-#include "types.h"
 #include "ast.h"
+#include "types.h"
 
 // Strings Table
 // ----------------------------------------------------------------------------
@@ -46,9 +46,11 @@ VarTable *create_var_table();
 // No check is made by this function, so make sure to call 'lookup_var' first.
 // Returns the index where the variable was inserted.
 int add_to_var_table(VarTable *vt, char *s, int line, Type type,
-                     Type array_type, int scope, int dimension);
+                     Type array_type, int scope, int dimension,
+                     int relative_pos);
 
-int add_var(VarTable *vt, char *s, int line, Type type, int scope);
+int add_var(VarTable *vt, char *s, int line, Type type, int scope,
+            int relative_pos);
 
 int add_array(VarTable *vt, char *s, int line, Type type, int scope,
               int dimension);
@@ -99,13 +101,17 @@ typedef struct func_table FuncTable;
 // Creates an empty variables table.
 FuncTable *create_func_table();
 
-int get_func_table_size(FuncTable* vt);
+int get_func_table_size(FuncTable *ft);
+
+int get_func_num_vars(FuncTable *ft, int i);
+
+void add_var_to_func(FuncTable *ft, int i);
 
 // Adds a fresh var to the table.
 // No check is made by this function, so make sure to call 'lookup_var' first.
 // Returns the index where the variable was inserted.
 int add_func(FuncTable *vt, char *s, int line, Type type, int scope);
-void add_func_params(FuncTable* vt, int i, Type *param_types, int num_param);
+void add_func_params(FuncTable *vt, int i, Type *param_types, int num_param);
 
 // Returns the index where the given variable is stored or -1 otherwise.
 int lookup_for_create_func(FuncTable *vt, char *s, int scope);
@@ -133,13 +139,13 @@ Type get_func_type(FuncTable *vt, int i);
 // first.
 int get_func_scope(FuncTable *vt, int i);
 
-int get_func_num_params(FuncTable* vt, int i);
+int get_func_num_params(FuncTable *vt, int i);
 
-void set_func_ast_start(FuncTable* ft, int i, AST* ast);
+void set_func_ast_start(FuncTable *ft, int i, AST *ast);
 
-AST* get_func_ast_start(FuncTable* ft, int i);
+AST *get_func_ast_start(FuncTable *ft, int i);
 
-int get_func_is_builtin(FuncTable* ft, int i);
+int get_func_is_builtin(FuncTable *ft, int i);
 
 // Prints the given table to stdout.
 void print_func_table(char *name, FuncTable *vt);

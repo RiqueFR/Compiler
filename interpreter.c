@@ -15,10 +15,18 @@ extern FuncTable *func_table;
 
 AST* main_ast = NULL;
 
+
 typedef union {
     int   as_int;
     float as_float;
 } Word;
+
+#define FRAME_MAX_VARS 100
+
+typedef frame {
+	int function;
+	Word variables[FRAME_MAX_VARS];
+} Frame;
 
 // ----------------------------------------------------------------------------
 
