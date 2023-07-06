@@ -13,6 +13,8 @@ extern StrTable *str_table;
 extern VarTable *var_table;
 extern FuncTable *func_table;
 
+int ret_abort = 0;
+
 AST* main_ast = NULL;
 
 typedef union {
@@ -30,6 +32,8 @@ Word stack[STACK_SIZE];
 int sp; // stack pointer
 int fp; // frame pointer
 int cl; // control link
+
+Word return_val;
 
 // All these ops should have a boundary check, buuuut... X_X
 
@@ -99,13 +103,13 @@ Word mem[MEM_SIZE];
 
 void storei(int addr, int val) {
 	int offset = get_var_offset(var_table, addr);
-	printf("fp: %d | pushoffset: %d | val: %d\n", fp, offset, val);
+	/*printf("fp: %d | pushoffset: %d | val: %d\n", fp, offset, val);*/
     stack[fp + offset].as_int = val;
 }
 
 int loadi(int addr) {
 	int offset = get_var_offset(var_table, addr);
-	printf("fp: %d | loadoffset: %d | val: %d\n", fp, offset, stack[fp + offset].as_int);
+	/*printf("fp: %d | loadoffset: %d | val: %d\n", fp, offset, stack[fp + offset].as_int);*/
     return stack[fp + offset].as_int;
 }
 
@@ -280,17 +284,40 @@ void run_func_decl(AST* ast) {
 void run_printf(AST *ast) {
 	trace("print");
 	AST* expr_ast = get_child(ast, 0);
-	/*rec_run_ast(expr_ast);*/
-	pushi(get_parami(0));
 	switch(get_node_type(expr_ast)) {
 		case INT_TYPE:
+			pushi(get_parami(0));
 			write_int();
 			break;
 		case REAL_TYPE:
+			pushf(get_paramf(0));
 			write_real();
 			break;
 		case STR_TYPE:
+			pushi(get_parami(0));
 			write_str();
+			break;
+		default:;
+	}
+}
+
+void run_scanf(AST *ast) {
+	trace("scan");
+	AST* expr_ast = get_child(ast, 0);
+	/*int pos = get_parami(0);*/
+	pushi(get_data(expr_ast));
+	int pos = popi();
+	printf("scan -> %d\n", pos);
+	pushi(pos);
+	switch(get_node_type(expr_ast)) {
+		case INT_TYPE:
+			read_int(popi());
+			break;
+		case REAL_TYPE:
+			read_real(popi());
+			break;
+		case STR_TYPE:
+			read_str(popi());
 			break;
 		default:;
 	}
@@ -304,19 +331,44 @@ void run_func_use(AST* ast) {
 	for(int i = get_child_count(ast) - 1; i >=0; i--) {
 		rec_run_ast(get_child(ast, i));
 	}
-	call_function(data);
-	printf("in ");
-	print_stack();
+	/*printf("in ");*/
+	/*print_stack();*/
 	if(get_func_is_builtin(func_table, data)) {
-		if(!strcmp(get_func_name(func_table, data), "printf"))
+		if(!strcmp(get_func_name(func_table, data), "printf")) {
+			call_function(data);
 			run_printf(ast);
+			return_function();
+		} else if(!strcmp(get_func_name(func_table, data), "scanf")) {
+			run_scanf(ast);
+			popi();	
+		}
 	} else {
+		call_function(data);
 		rec_run_ast(get_child(get_func_ast_start(func_table, data), 0));
 		rec_run_ast(get_child(get_func_ast_start(func_table, data), 1));
+		return_function();
 	}
-	return_function();
-	printf("out ");
-	print_stack();
+	for(int i = 0; i < get_func_num_params(func_table, data); i++) {
+		popi();
+	}
+	if(get_node_type(ast) != VOID_TYPE) {
+		// get return from function
+		switch(get_node_type(ast)) {
+			case INT_TYPE:
+				pushi(return_val.as_int);
+				break;
+			case REAL_TYPE:
+				pushi(return_val.as_float);
+				break;
+			case STR_TYPE:
+				pushi(return_val.as_int);
+				break;
+			default:;
+		}
+	}
+	/*printf("out ");*/
+	/*print_stack();*/
+	ret_abort = 0;
 }
 
 void run_if(AST *ast) {
@@ -505,8 +557,23 @@ void run_real_val(AST *ast) {
 
 void run_return(AST* ast) {
 	trace("return");
-	if(get_child_count(ast) > 0)
-		rec_run_ast(get_child(ast, 0));
+	AST* child = get_child(ast, 0);
+	if(get_child_count(ast) > 0) {
+		rec_run_ast(child);
+	}
+	ret_abort = 1;
+	switch(get_node_type(child)) {
+		case INT_TYPE:
+			return_val.as_int = popi();
+			break;
+		case REAL_TYPE:
+			return_val.as_float = popf();
+			break;
+		case STR_TYPE:
+			return_val.as_int = popi();
+			break;
+		default:;
+	}
 }
 
 void run_while(AST *ast) {
@@ -578,44 +645,45 @@ void run_r2i(AST* ast) {
 }
 
 void rec_run_ast(AST *ast) {
-    switch(get_kind(ast)) {
-        case AND_NODE:   		run_and(ast); 		break;
-        case ARRAY_USE_NODE:   	run_array_use(ast); break;
-        case ASSIGN_NODE:   	run_assign(ast); 	break;
-        case BLOCK_NODE:    	run_block(ast); 	break;
-        case EQ_NODE:       	run_eq(ast); 		break;
-        case FLOAT_VAL_NODE: 	run_real_val(ast); 	break;
-        case FUNC_DECL_NODE: 	run_func_decl(ast); break;
-        case FUNC_USE_NODE: 	run_func_use(ast); 	break;
-        case IF_NODE: 			run_if(ast); 		break;
-        case INT_VAL_NODE: 		run_int_val(ast); 	break;
-        case GT_NODE: 			run_gt(ast); 		break;
-        case LT_NODE: 			run_lt(ast); 		break;
-        case MINUS_NODE: 		run_minus(ast); 	break;
-		case NEG_NODE: 			run_neg(ast); 		break;
-		case NOT_NODE: 			run_not(ast); 		break;
-        case OR_NODE: 			run_or(ast); 		break;
-        case OVER_NODE: 		run_over(ast); 		break;
-        case PLUS_NODE: 		run_plus(ast); 		break;
-        case PROGRAM_NODE: 		run_program(ast); 	break;
-        /*case READ_NODE: 		run_read(ast); 		break;*/
-        case RETURN_NODE: 		run_return(ast); 	break;
-        case STRING_VAL_NODE: 	run_str_val(ast); 	break;
-        case TIMES_NODE: 		run_times(ast); 	break;
-        case VAR_DECL_NODE: 	run_var_decl(ast); 	break;
-        case VAR_LIST_NODE: 	run_var_list(ast); 	break;
-        case VAR_USE_NODE: 		run_var_use(ast); 	break;
-        case VOID_VAL_NODE: 	run_void_val(ast); 	break;
-        case WHILE_NODE: 		run_while(ast); 	break;
-        /*case PRINTF_NODE: 		run_printf(ast); 	break;*/
+	if(!ret_abort)
+		switch(get_kind(ast)) {
+			case AND_NODE:   		run_and(ast); 		break;
+			case ARRAY_USE_NODE:   	run_array_use(ast); break;
+			case ASSIGN_NODE:   	run_assign(ast); 	break;
+			case BLOCK_NODE:    	run_block(ast); 	break;
+			case EQ_NODE:       	run_eq(ast); 		break;
+			case FLOAT_VAL_NODE: 	run_real_val(ast); 	break;
+			case FUNC_DECL_NODE: 	run_func_decl(ast); break;
+			case FUNC_USE_NODE: 	run_func_use(ast); 	break;
+			case IF_NODE: 			run_if(ast); 		break;
+			case INT_VAL_NODE: 		run_int_val(ast); 	break;
+			case GT_NODE: 			run_gt(ast); 		break;
+			case LT_NODE: 			run_lt(ast); 		break;
+			case MINUS_NODE: 		run_minus(ast); 	break;
+			case NEG_NODE: 			run_neg(ast); 		break;
+			case NOT_NODE: 			run_not(ast); 		break;
+			case OR_NODE: 			run_or(ast); 		break;
+			case OVER_NODE: 		run_over(ast); 		break;
+			case PLUS_NODE: 		run_plus(ast); 		break;
+			case PROGRAM_NODE: 		run_program(ast); 	break;
+			/*case READ_NODE: 		run_read(ast); 		break;*/
+			case RETURN_NODE: 		run_return(ast); 	break;
+			case STRING_VAL_NODE: 	run_str_val(ast); 	break;
+			case TIMES_NODE: 		run_times(ast); 	break;
+			case VAR_DECL_NODE: 	run_var_decl(ast); 	break;
+			case VAR_LIST_NODE: 	run_var_list(ast); 	break;
+			case VAR_USE_NODE: 		run_var_use(ast); 	break;
+			case VOID_VAL_NODE: 	run_void_val(ast); 	break;
+			case WHILE_NODE: 		run_while(ast); 	break;
+			/*case PRINTF_NODE: 		run_printf(ast); 	break;*/
 
-        case I2R_NODE: 			run_i2r(ast); 		break;
-        case R2I_NODE: 			run_r2i(ast); 		break;
+			case I2R_NODE: 			run_i2r(ast); 		break;
+			case R2I_NODE: 			run_r2i(ast); 		break;
 
-        default:
-            fprintf(stderr, "Invalid kind: %s!\n", kind2str(get_kind(ast)));
-            exit(EXIT_FAILURE);
-    }
+			default:
+				fprintf(stderr, "Invalid kind: %s!\n", kind2str(get_kind(ast)));
+				exit(EXIT_FAILURE);
+		}
 }
 
 // ----------------------------------------------------------------------------

@@ -145,8 +145,8 @@ VarTable* create_var_table() {
 void print_var_table(char* name, VarTable* vt) {
     printf("%s table:\n", name);
     for (int i = 0; i < vt->size; i++) {
-         printf("Entry %d -- name: %s, line: %d, type: %s, scope: %d\n", i,
-                get_name(vt, i), get_line(vt, i), get_text(get_type(vt, i)), get_scope(vt, i));
+         printf("Entry %d -- name: %s, line: %d, type: %s, scope: %d, relative: %d\n", i,
+                get_name(vt, i), get_line(vt, i), get_text(get_type(vt, i)), get_scope(vt, i), get_var_offset(vt, i));
     }
 }
 
@@ -270,7 +270,7 @@ void add_builtin_functions(FuncTable* ft) {
 	Type args[] = {STR_TYPE};
 	add_func_params(ft, pos, args, 1);
 
-	pos = add_func_builtin(ft, "itoa", 0, STR_TYPE, 0);
+	pos = add_func_builtin(ft, "scanf", 0, VOID_TYPE, 0);
 	args[0] = INT_TYPE;
 	add_func_params(ft, pos, args, 1);
 

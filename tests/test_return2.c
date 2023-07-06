@@ -3,6 +3,7 @@ int teste() {
 }
 
 int main() {
-	teste();
+	int i = teste();
+	printf(i);
 	return 0;
 }

@@ -132,7 +132,7 @@ func_declaration
 	;
 
 param_type
-	: type ID { check_new_var(); int pos = new_var(); $$ = new_node(VAR_DECL_NODE, pos, get_type(var_table, pos)); }
+	: type ID { check_new_var(); int pos = add_var(var_table, id_string, yylineno, type, scope, -func_num_params); $$ = new_node(VAR_DECL_NODE, pos, get_type(var_table, pos)); }
 	;
 
 param_type_list
