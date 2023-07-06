@@ -15,18 +15,10 @@ extern FuncTable *func_table;
 
 AST* main_ast = NULL;
 
-
 typedef union {
     int   as_int;
     float as_float;
 } Word;
-
-#define FRAME_MAX_VARS 100
-
-typedef frame {
-	int function;
-	Word variables[FRAME_MAX_VARS];
-} Frame;
 
 // ----------------------------------------------------------------------------
 
@@ -36,23 +28,32 @@ typedef frame {
 
 Word stack[STACK_SIZE];
 int sp; // stack pointer
+int fp; // frame pointer
+int cl; // control link
 
 // All these ops should have a boundary check, buuuut... X_X
 
-void pushi(int x) {
-    stack[++sp].as_int = x;
+void pushi(int val) {
+    stack[++sp].as_int = val;
 }
 
 int popi() {
     return stack[sp--].as_int;
 }
 
-void pushf(float x) {
-    stack[++sp].as_float = x;
+void pushf(float val) {
+    stack[++sp].as_float = val;
 }
 
 float popf() {
     return stack[sp--].as_float;
+}
+
+int get_parami(int pos) {
+    return stack[fp - pos - 2].as_int;
+}
+float get_paramf(int pos) {
+    return stack[fp - pos - 2].as_float;
 }
 
 void init_stack() {
@@ -60,6 +61,8 @@ void init_stack() {
         stack[i].as_int = 0;
     }
     sp = -1;
+	fp = 0;
+	cl = 0;
 }
 
 void print_stack() {
@@ -67,7 +70,23 @@ void print_stack() {
     for (int i = 0; i <= sp; i++) {
         printf("%d ", stack[i].as_int);
     }
-    printf("\n");
+    printf(" | sp: %d | fp: %d | cl: %d\n", sp, fp, cl);
+}
+
+void call_function(int func_pos) {
+	pushi(cl);
+	cl = fp;
+	fp = ++sp;
+	int num_vars = get_func_num_vars(func_table, func_pos);
+	int num_params = get_func_num_params(func_table, func_pos);
+	if(num_vars > num_params)
+		sp += num_vars - num_params;
+}
+
+void return_function() {
+	sp = fp - 1;
+	fp = cl;
+	cl = popi();
 }
 
 // ----------------------------------------------------------------------------
@@ -79,19 +98,25 @@ void print_stack() {
 Word mem[MEM_SIZE];
 
 void storei(int addr, int val) {
-    mem[addr].as_int = val;
+	int offset = get_var_offset(var_table, addr);
+	printf("fp: %d | pushoffset: %d | val: %d\n", fp, offset, val);
+    stack[fp + offset].as_int = val;
 }
 
 int loadi(int addr) {
-    return mem[addr].as_int;
+	int offset = get_var_offset(var_table, addr);
+	printf("fp: %d | loadoffset: %d | val: %d\n", fp, offset, stack[fp + offset].as_int);
+    return stack[fp + offset].as_int;
 }
 
 void storef(int addr, float val) {
-    mem[addr].as_float = val;
+	int offset = get_var_offset(var_table, addr);
+    stack[fp + offset].as_float = val;
 }
 
 float loadf(int addr) {
-    return mem[addr].as_float;
+	int offset = get_var_offset(var_table, addr);
+    return stack[fp + offset].as_float;
 }
 
 void init_mem() {
@@ -255,7 +280,8 @@ void run_func_decl(AST* ast) {
 void run_printf(AST *ast) {
 	trace("print");
 	AST* expr_ast = get_child(ast, 0);
-	rec_run_ast(expr_ast);
+	/*rec_run_ast(expr_ast);*/
+	pushi(get_parami(0));
 	switch(get_node_type(expr_ast)) {
 		case INT_TYPE:
 			write_int();
@@ -274,12 +300,23 @@ void run_func_use(AST* ast) {
 	trace("func_use");
 	// run called function
 	int data = get_data(ast);
+	printf("data: %d\n", data);
+	for(int i = get_child_count(ast) - 1; i >=0; i--) {
+		rec_run_ast(get_child(ast, i));
+	}
+	call_function(data);
+	printf("in ");
+	print_stack();
 	if(get_func_is_builtin(func_table, data)) {
 		if(!strcmp(get_func_name(func_table, data), "printf"))
 			run_printf(ast);
 	} else {
+		rec_run_ast(get_child(get_func_ast_start(func_table, data), 0));
 		rec_run_ast(get_child(get_func_ast_start(func_table, data), 1));
 	}
+	return_function();
+	printf("out ");
+	print_stack();
 }
 
 void run_if(AST *ast) {
@@ -436,7 +473,11 @@ void run_program(AST *ast) {
 	rec_run_ast(get_child(ast, 0)); // run block
 	// run main block node
 	trace("main");
+	/*run_func_use(get_child(main_ast, 1));*/
+	call_function(get_data(main_ast));
 	rec_run_ast(get_child(main_ast, 1));
+	return_function();
+	print_stack();
 }
 
 void run_read(AST *ast) {
@@ -505,6 +546,10 @@ void run_var_decl(AST *ast) {
 
 void run_var_list(AST *ast) {
     trace("var_list");
+	for(int i = 0; i < get_child_count(ast); i++) {
+		int pos = get_data(get_child(ast, i));
+		storei(pos, get_parami(i));
+	}
     // Nothing to do, memory was already cleared upon initialization.
 }
 

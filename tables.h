@@ -83,6 +83,8 @@ Type get_array_type(VarTable *vt, int i);
 // first.
 int get_scope(VarTable *vt, int i);
 
+int get_var_offset(VarTable *vt, int i);
+
 // Prints the given table to stdout.
 void print_var_table(char *name, VarTable *vt);
 

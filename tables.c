@@ -71,12 +71,6 @@ struct var_table {
     int size;
 };
 
-VarTable* create_var_table() {
-    VarTable *vt = malloc(sizeof * vt);
-    vt->size = 0;
-    return vt;
-}
-
 int lookup_for_create_var(VarTable* vt, char* s, int scope) {
     for (int i = 0; i < vt->size; i++) {
         if (strcmp(vt->t[i].name, s) == 0 && scope == get_scope(vt, i))/*variable in the same scope passed or global scope*/  {
@@ -135,6 +129,17 @@ Type get_type(VarTable* vt, int i) {
 
 int get_scope(VarTable* vt, int i) {
     return vt->t[i].scope;
+}
+
+int get_var_offset(VarTable* vt, int i) {
+	return vt->t[i].relative_pos;
+}
+
+VarTable* create_var_table() {
+    VarTable *vt = malloc(sizeof * vt);
+    vt->size = 0;
+	add_var(vt, "elem", 0, STR_TYPE, 1, 0);
+    return vt;
 }
 
 void print_var_table(char* name, VarTable* vt) {
