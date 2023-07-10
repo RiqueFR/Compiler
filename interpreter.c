@@ -635,11 +635,13 @@ void run_void_val(AST* ast) {
 }
 
 void run_i2r(AST* ast) {
+	trace("i2r");
     rec_run_ast(get_child(ast, 0));
 	pushf((float)popi());
 }
 
 void run_r2i(AST* ast) {
+	trace("r2i");
     rec_run_ast(get_child(ast, 0));
 	pushi((int)popf());
 }

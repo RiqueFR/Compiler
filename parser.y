@@ -25,11 +25,14 @@
 	int new_array();
     void check_new_var();
     int check_var();
-	void type_error(Type type_left, Type type_right, char* op_str);
+	void type_error(Type type_left, Type type_right, const char* op_str);
 	Type check_type_sum(AST* type_left, AST* type_right, char* op_str);
     Type check_type_mul(AST* type_left, AST* type_right, char* op_str);
     Type check_type_op(AST* type_left, AST* type_right, char* op_str);
     Type check_type_assign(AST* type_left, AST* type_right, char* op_str);
+	AST* unify_bin_return(Type func_type, AST* return_exp_node, NodeKind kind, Unif (*unify)(Type,Type));
+	AST* unify_bin_node(AST* l, AST* r,
+                    NodeKind kind, const char* op, Unif (*unify)(Type,Type));
 	void check_condition(AST* type, char* condition);
 	void check_return(Type type_function, AST* ast_return);
 	void check_array_position_type(AST* type);
@@ -109,7 +112,7 @@ stmt
 	| declare_id { $$ = $1; }
 	| declare_array { $$ = $1; }
 	| func_call SEMI { $$ = $1; }
-	| RETURN expr SEMI { check_return(get_func_type(func_table, scope), $2); $$ = new_subtree(RETURN_NODE, VOID_TYPE, 1, $2); }
+	| RETURN expr SEMI { Type loc_func_type = get_func_type(func_table, scope); check_return(loc_func_type, $2); $$ = unify_bin_return(loc_func_type, $2, RETURN_NODE, assign); }//$$ = new_subtree(RETURN_NODE, VOID_TYPE, 1, $2); }
 	| RETURN SEMI { check_return(get_func_type(func_table, scope), new_node(VOID_VAL_NODE, 0, VOID_TYPE)); $$ = new_node(RETURN_NODE, 0, VOID_TYPE); }
 	;
 
@@ -183,15 +186,13 @@ declare_array
 declare_id
 	: type ID { check_new_var(); int pos = new_var(); $1 = new_node(VAR_DECL_NODE, pos, get_type(var_table, pos)); } SEMI { $$ = $1; }
 	| type ID { check_new_var(); int pos = new_var(); $1 = new_node(VAR_DECL_NODE, pos, get_type(var_table, pos)); } ASSIGN expr SEMI {
-		check_type_assign($1, $5, "=");
-		$$ = new_subtree(ASSIGN_NODE, VOID_TYPE, 2, $1, $5);
-	}
+		$$ = unify_bin_node($1, $5, ASSIGN_NODE, "<", assign); }
 	//| array_base_declaration expr RBRA SEMI
 	//| array_base_declaration INT_VAL RBRA ASSIGN LCBRA arg_list RCBRA SEMI
 	;
 
 assign
-	: ID { int pos = check_var(); $1 = new_node(VAR_USE_NODE, pos, get_type(var_table, pos)); } ASSIGN expr SEMI { check_type_assign($1, $4, "="); $$ = new_subtree(ASSIGN_NODE, VOID_TYPE, 2, $1, $4); }
+	: ID { int pos = check_var(); $1 = new_node(VAR_USE_NODE, pos, get_type(var_table, pos)); } ASSIGN expr SEMI { $$ = unify_bin_node($1, $4, ASSIGN_NODE, "<", assign); }
 	| ID { int pos = check_var();
 		Type res_type = get_type(var_table, pos);
 		if (res_type == ARRAY)
@@ -207,15 +208,15 @@ expr
 	: LPAR expr RPAR { $$ = $2; }
 	| NOT expr { $$ = new_subtree(NOT_NODE, check_type_op($2, $2, "!"), 1, $2); }
 	| MINUS expr %prec UMINUS { $$ = new_subtree(NEG_NODE, check_type_mul($2, $2, "-"), 1, $2); }
-	| expr AND expr { check_type_op($1, $3, "&&"); $$ = new_subtree(AND_NODE, INT_TYPE, 2, $1, $3); }
-	| expr OR expr { $$ = new_subtree(OR_NODE, check_type_op($1, $3, "||"), 2, $1, $3); }
-	| expr LT expr { $$ = new_subtree(LT_NODE, check_type_op($1, $3, "<"), 2, $1, $3); }
-	| expr GT expr { $$ = new_subtree(GT_NODE, check_type_op($1, $3, ">"), 2, $1, $3); }
-	| expr EQ expr { $$ = new_subtree(EQ_NODE, check_type_op($1, $3, "=="), 2, $1, $3); }
-	| expr TIMES expr { $$ = new_subtree(TIMES_NODE, check_type_mul($1, $3, "*"), 2, $1, $3); }
-	| expr OVER expr { $$ = new_subtree(OVER_NODE, check_type_mul($1, $3, "/"), 2, $1, $3); }
-	| expr PLUS expr { $$ = new_subtree(PLUS_NODE, check_type_sum($1, $3, "+"), 2, $1, $3); }
-	| expr MINUS expr { $$ = new_subtree(MINUS_NODE, check_type_mul($1, $3, "-"), 2, $1, $3); }
+	| expr AND expr { $$ = unify_bin_node($1, $3, AND_NODE, "&&", op); }
+	| expr OR expr { $$ = unify_bin_node($1, $3, OR_NODE, "||", op); }
+	| expr LT expr { $$ = unify_bin_node($1, $3, LT_NODE, "<", op); }
+	| expr GT expr { $$ = unify_bin_node($1, $3, GT_NODE, ">", op); }
+	| expr EQ expr { $$ = unify_bin_node($1, $3, EQ_NODE, "==", op); }
+	| expr TIMES expr { $$ = unify_bin_node($1, $3, TIMES_NODE, "*", mul); }
+	| expr OVER expr { $$ = unify_bin_node($1, $3, OVER_NODE, "<", mul); }
+	| expr PLUS expr { $$ = unify_bin_node($1, $3, PLUS_NODE, "<", sum); }
+	| expr MINUS expr { $$ = unify_bin_node($1, $3, MINUS_NODE, "<", mul); }
 	| ID {
 	    int pos = check_var();
 		$1 = new_node(VAR_USE_NODE, pos, ARRAY); }
@@ -315,7 +316,7 @@ void check_new_var() {
     }
 }
 
-void type_error(Type type_left, Type type_right, char* op_str) {
+void type_error(Type type_left, Type type_right, const char* op_str) {
 	print_var_table("var", var_table);
 	printf("SEMANTIC ERROR (%d): incompatible types for operator '%s', LHS is '%s' and RHS is '%s'.\n", yylineno, op_str, get_text(type_left), get_text(type_right));
 	exit(EXIT_FAILURE);
@@ -356,6 +357,38 @@ Type check_type_assign(AST* ast_left, AST* ast_right, char* op_str) {
 	    type_error(type_left, type_right, op_str);
     }   
     return unif.type;
+}
+
+AST* create_conv_node(Conv conv, AST *n) {
+    switch(conv) {
+        case I2F:  return new_subtree(I2R_NODE, REAL_TYPE, 1, n);
+        case F2I:  return new_subtree(R2I_NODE, INT_TYPE,  1, n);
+        case NONE: return n;
+        default:
+            printf("INTERNAL ERROR: invalid conversion of types!\n");
+            exit(EXIT_FAILURE);
+    }
+}
+
+AST* unify_bin_return(Type func_type, AST* return_exp_node, NodeKind kind, Unif (*unify)(Type,Type)) {
+    Type return_type = get_node_type(return_exp_node);
+    Unif unif = unify(func_type, return_type);
+	// check should already had been done
+    return_exp_node = create_conv_node(unif.rc, return_exp_node);
+    return new_subtree(kind, unif.type, 1, return_exp_node);
+}
+
+AST* unify_bin_node(AST* l, AST* r,
+                    NodeKind kind, const char* op, Unif (*unify)(Type,Type)) {
+    Type lt = get_node_type(l);
+    Type rt = get_node_type(r);
+    Unif unif = unify(lt, rt);
+    if (unif.type == ERROR) {
+        type_error(lt, rt, op);
+    }
+    l = create_conv_node(unif.lc, l);
+    r = create_conv_node(unif.rc, r);
+    return new_subtree(kind, unif.type, 2, l, r);
 }
 
 void check_condition(AST* ast, char* condition) {
