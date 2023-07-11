@@ -107,10 +107,22 @@ void storei(int addr, int val) {
     stack[fp + offset].as_int = val;
 }
 
+void storei_array(int addr, int pos, int val) {
+	int offset = get_var_offset(var_table, addr);
+	/*printf("fp: %d | pushoffset: %d | pos: %d | val: %d\n", fp, offset, pos, val);*/
+    stack[fp + offset + pos].as_int = val;
+}
+
 int loadi(int addr) {
 	int offset = get_var_offset(var_table, addr);
 	/*printf("fp: %d | loadoffset: %d | val: %d\n", fp, offset, stack[fp + offset].as_int);*/
     return stack[fp + offset].as_int;
+}
+
+int loadi_array(int addr, int pos) {
+	int offset = get_var_offset(var_table, addr);
+	/*printf("fp: %d | loadoffset: %d | val: %d\n", fp, offset, stack[fp + offset].as_int);*/
+    return stack[fp + offset + pos].as_int;
 }
 
 void storef(int addr, float val) {
@@ -118,9 +130,21 @@ void storef(int addr, float val) {
     stack[fp + offset].as_float = val;
 }
 
+void storef_array(int addr, int pos, float val) {
+	int offset = get_var_offset(var_table, addr);
+	/*printf("fp: %d | pushoffset: %d | val: %d\n", fp, offset, val);*/
+    stack[fp + offset + pos].as_float = val;
+}
+
 float loadf(int addr) {
 	int offset = get_var_offset(var_table, addr);
     return stack[fp + offset].as_float;
+}
+
+int loadf_array(int addr, int pos) {
+	int offset = get_var_offset(var_table, addr);
+	/*printf("fp: %d | loadoffset: %d | val: %d\n", fp, offset, stack[fp + offset].as_int);*/
+    return stack[fp + offset + pos].as_float;
 }
 
 void init_mem() {
@@ -229,25 +253,52 @@ void run_and(AST* ast) {
 	}
 }
 
-void run_array_use(AST* ast) {}
+void run_array_use(AST* ast) {
+	trace("array_use");
+	rec_run_ast(get_child(ast, 1)); // position on array
+	rec_run_ast(get_child(ast, 0)); // array
+	int idx = popi();
+	if(get_type(var_table, idx) == REAL_TYPE)
+		pushf(loadf_array(idx, popi()));
+	else
+		pushi(loadi_array(idx, popi()));
+}
 
 void run_assign(AST *ast) {
 	trace("assign");
 	AST* expr_ast = get_child(ast, 1);
 	Type expr_type = get_node_type(expr_ast);
     rec_run_ast(expr_ast); // run expr
-    int idx = get_data(get_child(ast, 0)); // get data from VARUSE
-	switch(expr_type) {
-		case INT_TYPE:
-			storei(idx, popi());
-			break;
-		case REAL_TYPE:
-			storef(idx, popf());
-			break;
-		case STR_TYPE:
-			storei(idx, popi());
-			break;
-		default:;
+	AST* var_node = get_child(ast, 0);
+	if(get_node_type(var_node) == ARRAY) {
+		int idx = get_data(get_child(var_node, 0)); // get data from VARUSE
+		int array_pos = get_data(get_child(var_node, 1)); // get array assign position
+		switch(expr_type) {
+			case INT_TYPE:
+				storei_array(idx, array_pos, popi());
+				break;
+			case REAL_TYPE:
+				storef_array(idx, array_pos, popf());
+				break;
+			case STR_TYPE:
+				storei_array(idx, array_pos, popi());
+				break;
+			default:;
+		}
+	} else {
+		int idx = get_data(get_child(ast, 0)); // get data from VARUSE
+		switch(expr_type) {
+			case INT_TYPE:
+				storei(idx, popi());
+				break;
+			case REAL_TYPE:
+				storef(idx, popf());
+				break;
+			case STR_TYPE:
+				storei(idx, popi());
+				break;
+			default:;
+		}
 	}
 }
 
@@ -331,8 +382,6 @@ void run_func_use(AST* ast) {
 	for(int i = get_child_count(ast) - 1; i >=0; i--) {
 		rec_run_ast(get_child(ast, i));
 	}
-	/*printf("in ");*/
-	/*print_stack();*/
 	if(get_func_is_builtin(func_table, data)) {
 		if(!strcmp(get_func_name(func_table, data), "printf")) {
 			call_function(data);
@@ -366,8 +415,6 @@ void run_func_use(AST* ast) {
 			default:;
 		}
 	}
-	/*printf("out ");*/
-	/*print_stack();*/
 	ret_abort = 0;
 }
 
@@ -529,7 +576,6 @@ void run_program(AST *ast) {
 	call_function(get_data(main_ast));
 	rec_run_ast(get_child(main_ast, 1));
 	return_function();
-	print_stack();
 }
 
 void run_read(AST *ast) {

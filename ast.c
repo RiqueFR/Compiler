@@ -189,12 +189,9 @@ int has_data(NodeKind kind) {
 
 int print_node_dot(AST *node) {
     int my_nr = nr++;
-	/*printf("%s num_child: %d\n", get_kind_text(node->kind), node->count);*/
 
     fprintf(stderr, "node%d[label=\"", my_nr);
-    /*if (node->type != VOID_TYPE) {*/
         fprintf(stderr, "(%s) ", get_text(node->type));
-    /*}*/
 	if (node->kind == VAR_DECL_NODE || node->kind == VAR_USE_NODE) {
         fprintf(stderr, "%s@", get_name(var_table, node->data.as_int));
 	} else if(node->kind == FUNC_DECL_NODE || node->kind == FUNC_USE_NODE) {

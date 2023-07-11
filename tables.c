@@ -62,6 +62,7 @@ typedef struct {
   int line;
   Type type;
   Type array_type;
+  int array_size;
   int array_dimension;
   int relative_pos;
 } Entry;
@@ -107,8 +108,10 @@ int add_var(VarTable* vt, char* s, int line, Type type, int scope, int relative_
 	return add_to_var_table(vt, s, line, type, type, scope, 0, relative_pos);
 }
 
-int add_array(VarTable* vt, char* s, int line, Type type, int scope, int dimension) {
-	return add_to_var_table(vt, s, line, ARRAY, type, scope, dimension, 0);
+int add_array(VarTable* vt, char* s, int line, Type type, int scope, int dimension, int relative_pos, int size) {
+	int pos = add_to_var_table(vt, s, line, ARRAY, type, scope, dimension, relative_pos);
+	set_array_size(vt, pos, size);
+	return pos;
 }
 
 char* get_name(VarTable* vt, int i) {
@@ -133,6 +136,14 @@ int get_scope(VarTable* vt, int i) {
 
 int get_var_offset(VarTable* vt, int i) {
 	return vt->t[i].relative_pos;
+}
+
+void set_array_size(VarTable* vt, int i, int size) {
+	vt->t[i].array_size = size;
+}
+
+int get_array_size(VarTable* vt, int i) {
+	return vt->t[i].array_size;
 }
 
 VarTable* create_var_table() {
@@ -187,6 +198,10 @@ int get_func_num_vars(FuncTable* ft, int i) {
 
 void add_var_to_func(FuncTable* ft, int i) {
 	ft->num_vars[i]++;
+}
+
+void add_array_to_func(FuncTable* ft, int i, int array_size) {
+	ft->num_vars[i] += array_size;
 }
 
 int lookup_for_create_func(FuncTable* vt, char* s, int scope) {
@@ -272,10 +287,6 @@ void add_builtin_functions(FuncTable* ft) {
 
 	pos = add_func_builtin(ft, "scanf", 0, VOID_TYPE, 0);
 	args[0] = INT_TYPE;
-	add_func_params(ft, pos, args, 1);
-
-	pos = add_func_builtin(ft, "itof", 0, STR_TYPE, 0);
-	args[0] = REAL_TYPE;
 	add_func_params(ft, pos, args, 1);
 }
 

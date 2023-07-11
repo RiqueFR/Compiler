@@ -53,7 +53,7 @@ int add_var(VarTable *vt, char *s, int line, Type type, int scope,
             int relative_pos);
 
 int add_array(VarTable *vt, char *s, int line, Type type, int scope,
-              int dimension);
+              int dimension, int relative_pos, int size);
 
 // Returns the index where the given variable is stored or -1 otherwise.
 int lookup_for_create_var(VarTable *vt, char *s, int scope);
@@ -85,6 +85,10 @@ int get_scope(VarTable *vt, int i);
 
 int get_var_offset(VarTable *vt, int i);
 
+void set_array_size(VarTable *vt, int i, int size);
+
+int get_array_size(VarTable *vt, int i);
+
 // Prints the given table to stdout.
 void print_var_table(char *name, VarTable *vt);
 
@@ -108,6 +112,8 @@ int get_func_table_size(FuncTable *ft);
 int get_func_num_vars(FuncTable *ft, int i);
 
 void add_var_to_func(FuncTable *ft, int i);
+
+void add_array_to_func(FuncTable *ft, int i, int array_size);
 
 // Adds a fresh var to the table.
 // No check is made by this function, so make sure to call 'lookup_var' first.

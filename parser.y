@@ -22,7 +22,7 @@
     void check_new_func();
     int check_func();
     int new_var();
-	int new_array();
+	int new_array(int size);
     void check_new_var();
     int check_var();
 	void type_error(Type type_left, Type type_right, const char* op_str);
@@ -173,9 +173,9 @@ if_stmt
 	;
 
 array_base_declaration
-	: type ID LBRA {
-		check_new_var(); int pos = new_array(); $1 = new_node(VAR_DECL_NODE, pos, get_type(var_table, pos));
-	} INT_VAL RBRA { $$ = $1; }
+	: type ID LBRA INT_VAL {
+		check_new_var(); int pos = new_array(atoi(yytext)); $1 = new_node(VAR_DECL_NODE, pos, get_type(var_table, pos));
+	} RBRA { $$ = $1; }
 	;
 
 declare_array
@@ -187,8 +187,6 @@ declare_id
 	: type ID { check_new_var(); int pos = new_var(); $1 = new_node(VAR_DECL_NODE, pos, get_type(var_table, pos)); } SEMI { $$ = $1; }
 	| type ID { check_new_var(); int pos = new_var(); $1 = new_node(VAR_DECL_NODE, pos, get_type(var_table, pos)); } ASSIGN expr SEMI {
 		$$ = unify_bin_node($1, $5, ASSIGN_NODE, "<", assign); }
-	//| array_base_declaration expr RBRA SEMI
-	//| array_base_declaration INT_VAL RBRA ASSIGN LCBRA arg_list RCBRA SEMI
 	;
 
 assign
@@ -197,10 +195,10 @@ assign
 		Type res_type = get_type(var_table, pos);
 		if (res_type == ARRAY)
 			res_type = get_array_type(var_table, pos);
-		$1 = new_node(VAR_USE_NODE, pos, res_type); } LBRA expr RBRA ASSIGN expr SEMI {
+		$1 = new_node(VAR_USE_NODE, pos, res_type); } LBRA expr { AST* node = new_node(ARRAY_USE_NODE, get_data($1), ARRAY); add_child(node, $1); add_child(node, $4); $3 = node; } RBRA ASSIGN expr SEMI {
 		check_array_position_type($4);
-		check_type_assign($1, $7, "=");
-		$$ = new_subtree(ASSIGN_NODE, VOID_TYPE, 2, $1, $7);
+		check_type_assign($1, $8, "=");
+		$$ = new_subtree(ASSIGN_NODE, VOID_TYPE, 2, $3, $8);
 		}
 	;
 
@@ -292,11 +290,13 @@ void check_new_func() {
 
 int new_var() {
 	int relative_pos = get_func_num_vars(func_table, scope);
-	add_var_to_func(func_table, scope);
+	add_var_to_func(func_table, scope-1);
     return add_var(var_table, id_string, yylineno, type, scope, relative_pos);
 }
-int new_array() {
-    return add_array(var_table, id_string, yylineno, type, scope, 0);
+int new_array(int size) {
+	int relative_pos = get_func_num_vars(func_table, scope);
+	add_array_to_func(func_table, scope-1, size);
+    return add_array(var_table, id_string, yylineno, type, scope, 0, relative_pos, size);
 }
 
 int check_var() {
