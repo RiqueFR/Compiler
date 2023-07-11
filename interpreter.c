@@ -155,7 +155,7 @@ void init_mem() {
 
 // ----------------------------------------------------------------------------
 
-#define TRACE
+/*#define TRACE*/
 #ifdef TRACE
 #define trace(msg) printf("TRACE: %s\n", msg)
 #else
@@ -571,10 +571,8 @@ void run_program(AST *ast) {
 	rec_run_ast(get_child(ast, 0)); // run block
 	// run main block node
 	trace("main");
-	print_stack();
 	int main_pos = get_data(main_ast);
 	call_function(main_pos);
-	print_stack();
 	rec_run_ast(get_child(main_ast, 1));
 	return_function();
 }

@@ -6,7 +6,7 @@ int fatorial(int n) {
 }
 
 int main() {
-	int fat = fatorial(5);
+	int fat = fatorial(10);
 	printf(fat);
 	return 0;
 }
