@@ -290,12 +290,12 @@ void check_new_func() {
 
 int new_var() {
 	int relative_pos = get_func_num_vars(func_table, scope);
-	add_var_to_func(func_table, scope-1);
+	add_var_to_func(func_table, scope);
     return add_var(var_table, id_string, yylineno, type, scope, relative_pos);
 }
 int new_array(int size) {
 	int relative_pos = get_func_num_vars(func_table, scope);
-	add_array_to_func(func_table, scope-1, size);
+	add_array_to_func(func_table, scope, size);
     return add_array(var_table, id_string, yylineno, type, scope, 0, relative_pos, size);
 }
 

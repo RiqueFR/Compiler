@@ -81,7 +81,7 @@ void call_function(int func_pos) {
 	pushi(cl);
 	cl = fp;
 	fp = ++sp;
-	int num_vars = get_func_num_vars(func_table, func_pos);
+	int num_vars = get_func_num_vars(func_table, func_pos+1);
 	int num_params = get_func_num_params(func_table, func_pos);
 	if(num_vars > num_params)
 		sp += num_vars - num_params;
@@ -256,8 +256,7 @@ void run_and(AST* ast) {
 void run_array_use(AST* ast) {
 	trace("array_use");
 	rec_run_ast(get_child(ast, 1)); // position on array
-	rec_run_ast(get_child(ast, 0)); // array
-	int idx = popi();
+	int idx = get_data(get_child(ast, 0)); // array
 	if(get_type(var_table, idx) == REAL_TYPE)
 		pushf(loadf_array(idx, popi()));
 	else
@@ -269,10 +268,11 @@ void run_assign(AST *ast) {
 	AST* expr_ast = get_child(ast, 1);
 	Type expr_type = get_node_type(expr_ast);
     rec_run_ast(expr_ast); // run expr
-	AST* var_node = get_child(ast, 0);
+	AST* var_node = get_child(ast, 0); //var_use or array_use
 	if(get_node_type(var_node) == ARRAY) {
 		int idx = get_data(get_child(var_node, 0)); // get data from VARUSE
-		int array_pos = get_data(get_child(var_node, 1)); // get array assign position
+		rec_run_ast(get_child(var_node, 1)); // get data from VARUSE
+		int array_pos = popi();
 		switch(expr_type) {
 			case INT_TYPE:
 				storei_array(idx, array_pos, popi());
@@ -378,7 +378,6 @@ void run_func_use(AST* ast) {
 	trace("func_use");
 	// run called function
 	int data = get_data(ast);
-	printf("data: %d\n", data);
 	for(int i = get_child_count(ast) - 1; i >=0; i--) {
 		rec_run_ast(get_child(ast, i));
 	}
@@ -572,8 +571,10 @@ void run_program(AST *ast) {
 	rec_run_ast(get_child(ast, 0)); // run block
 	// run main block node
 	trace("main");
-	/*run_func_use(get_child(main_ast, 1));*/
-	call_function(get_data(main_ast));
+	print_stack();
+	int main_pos = get_data(main_ast);
+	call_function(main_pos);
+	print_stack();
 	rec_run_ast(get_child(main_ast, 1));
 	return_function();
 }
