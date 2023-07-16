@@ -5,6 +5,7 @@
 typedef enum { INT_TYPE, REAL_TYPE, STR_TYPE, VOID_TYPE, ARRAY, ERROR } Type;
 
 const char *get_text(Type type);
+const char *get_llvm_type(Type type);
 const int get_value(Type type);
 
 typedef enum { I2F, F2I, NONE } Conv;

@@ -1,5 +1,6 @@
 lex.yy.c
 scanner
+llvm_tests
 *.swp
 compiler
 scanner.c

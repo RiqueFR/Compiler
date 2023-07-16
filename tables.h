@@ -27,6 +27,8 @@ char *get_string(StrTable *st, int i);
 // Prints the given table to stdout.
 void print_str_table(StrTable *st);
 
+int get_str_table_size(StrTable *st);
+
 // Clears the allocated structure.
 void free_str_table(StrTable *st);
 

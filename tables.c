@@ -46,6 +46,10 @@ void print_str_table(StrTable* st) {
     }
 }
 
+int get_str_table_size(StrTable* st) {
+	return st->size;
+}
+
 void free_str_table(StrTable* st) {
     free(st);
 }

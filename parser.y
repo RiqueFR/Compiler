@@ -13,11 +13,12 @@
     #include <string.h>
     #include "ast.h"
 	#include "tables.h"
-	#include "interpreter.h"
+	#include "code.h"
 
     int yylex(void);
 	int yylex_destroy(void);
     void yyerror(char const *s);
+	extern int new_or_get_string();
     int new_func();
     void check_new_func();
     int check_func();
@@ -228,7 +229,7 @@ expr
 	| func_call { $$ = $1; }
 	| INT_VAL { $$ = new_node(INT_VAL_NODE, atoi(yytext), INT_TYPE); }
 	| FLOAT_VAL { AST* node = new_node(FLOAT_VAL_NODE, 0, REAL_TYPE); set_float_data(node, atof(yytext)); $$ = node; }
-	| STR_VAL { $$ = new_node(STRING_VAL_NODE, add_string(str_table, yytext), STR_TYPE); }
+	| STR_VAL { $$ = new_node(STRING_VAL_NODE, new_or_get_string(), STR_TYPE); }
 	| ID { int pos = check_var(); $$ = new_node(VAR_USE_NODE, pos, get_type(var_table, pos)); }
 	;
 %%
@@ -238,8 +239,9 @@ int main() {
     var_table = create_var_table();
     func_table = create_func_table();
 
-    if (yyparse() == 0) printf("PARSE SUCCESSFUL!\n");
-    else                printf("PARSE FAILED!\n");
+    if (yyparse() == 0) {/*printf("PARSE SUCCESSFUL!\n");*/}
+    else                {printf("PARSE FAILED!\n");}
+	/*
     printf("\n\n");
     print_str_table(str_table);
     printf("\n\n");
@@ -248,9 +250,10 @@ int main() {
     print_var_table("Var", var_table);
     printf("\n\n");
 	print_dot(program);
+	*/
 
 	stdin = fopen(ctermid(NULL), "r");
-	run_ast(program);
+	emit_code(program);
 	fclose(stdin);
 
     free_str_table(str_table);

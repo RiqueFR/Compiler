@@ -11,7 +11,7 @@
     #include "tables.h"
     extern StrTable* str_table;
     char id_string[500];
-    void new_string();
+    int new_or_get_string();
 %}
 
 int_val     			[0-9]+
@@ -66,7 +66,7 @@ single_line_comment 		"//".*\n
 "/"         { return OVER; }
 {int_val}   { return INT_VAL; }
 {float_val} { return FLOAT_VAL; }
-{str_val}   { new_string(); return STR_VAL; }
+{str_val}   { new_or_get_string(); return STR_VAL; }
 
 {id}        { strcpy(id_string, yytext); return ID; }
 
@@ -74,6 +74,13 @@ single_line_comment 		"//".*\n
 .           { return UNKNOWN; }
 %%
 
-void new_string() {
-    add_string(str_table, yytext);
+int new_or_get_string() {
+	// remove "" from string
+	char aux[500];
+	int s_size = strlen(yytext);
+	for(int i = 0; i < s_size-1; i++) {
+		aux[i] = yytext[i+1];
+	}
+	aux[s_size-2] = '\0';
+	return add_string(str_table, aux);
 }

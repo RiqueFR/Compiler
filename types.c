@@ -47,9 +47,19 @@ static const int TYPE_VALUE[] = {
 	4,
 	5
 };
+static const char *TYPE_LLVM[] = {
+	"i32",
+	"float",
+	"char*",
+	"void"
+};
 
 const char* get_text(Type type) {
     return TYPE_STRING[type];
+}
+
+const char* get_llvm_type(Type type) {
+    return TYPE_LLVM[type];
 }
 
 const int get_value(Type type) {
