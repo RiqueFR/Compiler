@@ -50,7 +50,7 @@ static const int TYPE_VALUE[] = {
 static const char *TYPE_LLVM[] = {
 	"i32",
 	"float",
-	"char*",
+	"i8*",
 	"void"
 };
 

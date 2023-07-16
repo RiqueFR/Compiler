@@ -127,7 +127,8 @@ type
 func_declaration
 	: type ID { check_new_func(); int pos = new_func();
 		// scope is func position + 1, scope 0 is global scope
-		scope = pos + 1;
+		/*scope = pos + 1;*/
+		scope = pos;
 		func_num_params = 0;
 		$1 = new_node(FUNC_DECL_NODE, pos, get_func_type(func_table, pos));
 		} LPAR opt_param_type_list {

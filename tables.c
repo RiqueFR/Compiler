@@ -17,12 +17,6 @@ struct str_table {
     int size;
 };
 
-StrTable* create_str_table() {
-    StrTable *st = malloc(sizeof * st);
-    st->size = 0;
-    return st;
-}
-
 int add_string(StrTable* st, char* s) {
     for (int i = 0; i < st->size; i++) {
         if (strcmp(st->t[i], s) == 0) {
@@ -48,6 +42,15 @@ void print_str_table(StrTable* st) {
 
 int get_str_table_size(StrTable* st) {
 	return st->size;
+}
+
+StrTable* create_str_table() {
+    StrTable *st = malloc(sizeof * st);
+    st->size = 0;
+	add_string(st, "%s\0");
+	add_string(st, "%d\0");
+	add_string(st, "%f\0");
+    return st;
 }
 
 void free_str_table(StrTable* st) {
