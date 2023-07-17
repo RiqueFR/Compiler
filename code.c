@@ -409,6 +409,8 @@ int emit_program(AST *ast) {
     trace("program");
 	rec_emit_code(get_child(ast, 0));
 	emit("declare i32 @printf(i8* noundef, ...) #1");
+	emit("!6 = distinct !{!6, !7}");
+	emit("!7 = !{!\"llvm.loop.mustprogress\"}");
 	return -1;
 }
 
@@ -437,6 +439,29 @@ int emit_return(AST* ast) {
 
 int emit_while(AST *ast) {
 	trace("while");
+	int br_expr = jump_label++;
+	int br_block = jump_label++;
+	int br_end = jump_label++;
+	char str[500];
+	sprintf(str, "br label %%jump%d", br_expr);
+	emit(str);
+
+	sprintf(str, "jump%d:", br_expr);
+	emit(str);
+	int res = rec_emit_code(get_child(ast, 0));
+	sprintf(str, "icmp ne i32 %%%d, 0", res);
+	res = new_reg_emit(str);
+	sprintf(str, "br i1 %%%d, label %%jump%d, label %%jump%d", res, br_block, br_end);
+	emit(str);
+
+	sprintf(str, "jump%d:", br_block);
+	emit(str);
+	res = rec_emit_code(get_child(ast, 1));
+	sprintf(str, "br label %%jump%d, !llvm.loop !6", br_expr);
+	emit(str);
+
+	sprintf(str, "jump%d:", br_end);
+	emit(str);
 	return -1;
 }
 
