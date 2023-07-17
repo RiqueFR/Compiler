@@ -32,9 +32,11 @@ void emit(const char* instr) {
 	next_instr++;
 }
 
-void store_int(int dest, int value) {
+void store_reg(Type type, int dest_reg, int value_reg) {
 	char str[500];
-	sprintf(str, "store i32 %%%d, i32* %%%d, align 4", dest, value);
+	int align = 4;
+	if (type == STR_TYPE) align = 8;
+	sprintf(str, "store %s %%%d, %s* %%%d, align %d", get_llvm_type(type), value_reg, get_llvm_type(type), dest_reg, align);
 	emit(str);
 }
 
@@ -63,7 +65,7 @@ void dump_str_table() {
 // ----------------------------------------------------------------------------
 // AST Traversal --------------------------------------------------------------
 
-#define TRACE
+/*#define TRACE*/
 #ifdef TRACE
 #define trace(msg) printf("TRACE: %s\n", msg)
 #else
@@ -81,8 +83,7 @@ int new_reg_emit(const char* str_emit) {
 	char str[500];
 	sprintf(str, "%%%d = %s", regs_count, str_emit);
 	emit(str);
-	regs_count++;
-	return regs_count;
+	return regs_count++;
 }
 
 int new_int_reg() {
@@ -99,6 +100,15 @@ int new_str_reg() {
 	char str[500];
 	sprintf(str, "%%%d = alloca i8*, align 8", regs_count);
 	return new_reg(str);
+}
+
+int emit_load(int reg, Type type) {
+	char str[500];
+	const char* type_llvm = get_llvm_type(type);
+	int align = 4;
+	if(type == STR_TYPE) align = 8;
+	sprintf(str, "load %s, %s* %%%d, align %d", type_llvm, type_llvm, reg, align);
+	return new_reg_emit(str);
 }
 
 int rec_emit_code(AST *ast);
@@ -123,6 +133,10 @@ int emit_array_use(AST* ast) {
 
 int emit_assign(AST *ast) {
 	trace("assign");
+	AST* expr_node = get_child(ast, 1);
+	int reg_expr = rec_emit_code(expr_node);
+	int idx = get_data(get_child(ast, 0));
+	store_reg(get_node_type(expr_node), idx, reg_expr);
 	return -1;
 }
 
@@ -166,33 +180,54 @@ int emit_func_decl(AST* ast) {
 	}
 	sprintf(str, "define dso_local %s @%s(%s) #0 {", get_llvm_type(get_node_type(ast)), get_func_name(func_table, func_idx), args);
 	emit(str);
+	// allocate all vals
+	regs_count = num_vars+1;
+	for(int i = 0; i < get_var_table_size(var_table); i++) {
+		if(get_scope(var_table, i) == func_idx) {
+			switch (get_type(var_table, i)) {
+				case INT_TYPE:
+					new_int_reg();
+					break;
+				case REAL_TYPE:
+					new_float_reg();
+					break;
+				case STR_TYPE:
+					new_str_reg();
+					break;
+				default:break;
+			}
+		}
+	}
 	rec_emit_code(get_child(ast, 1));
 	emit("}");
 	return -1;
 }
 
-int emit_printf(AST *ast) {
+int emit_print(AST* ast) {
 	trace("print");
-	return -1;
-}
-
-int emit_scanf(AST *ast) {
-	trace("scan");
-	return -1;
-}
-
-void emit_print(AST* ast) {
 	AST* child = get_child(ast, 0);
-	switch (get_node_type(child)) {
+	Type child_type = get_node_type(child);
+	int child_reg = rec_emit_code(child);
+	char emit_str[500];
+	int print_str_idx = add_string(str_table, "%s");
+	switch (child_type) {
 		case STR_TYPE:
-			int str_idx = rec_emit_code(child);
-			int print_str_idx = add_string(str_table, "%s");
-			char emit_str[500];
-			sprintf(emit_str, "call i32 (i8*, ...) @printf(i8* noundef getelementptr inbounds ([3 x i8], [3 x i8]* @.str.%d, i64 0, i64 0), i8* noundef %%%d)", print_str_idx, str_idx);
-			new_reg_emit(emit_str);
+			print_str_idx = add_string(str_table, "%s");
 			break;
-		default: break;
+		case INT_TYPE:
+			print_str_idx = add_string(str_table, "%d");
+			break;
+		case REAL_TYPE:
+			print_str_idx = add_string(str_table, "%f");
+			sprintf(emit_str, "fpext float %%%d to double", child_reg);
+			int float_conv = new_reg_emit(emit_str);
+			sprintf(emit_str, "call i32 (i8*, ...) @printf(i8* noundef getelementptr inbounds ([3 x i8], [3 x i8]* @.str.%d, i64 0, i64 0), double noundef %%%d)", print_str_idx, float_conv);
+			return new_reg_emit(emit_str);
+			break;
+		default:break;
 	}
+	sprintf(emit_str, "call i32 (i8*, ...) @printf(i8* noundef getelementptr inbounds ([3 x i8], [3 x i8]* @.str.%d, i64 0, i64 0), %s noundef %%%d)", print_str_idx, get_llvm_type(child_type), child_reg);
+	return new_reg_emit(emit_str);
 }
 
 // TODO make generic
@@ -213,11 +248,11 @@ int emit_if(AST *ast) {
 int emit_int_val(AST *ast) {
 	trace("int_val");
 	int x = new_int_reg();
-	int value = get_data(ast);
+	int idx = get_data(ast);
 	char str[500];
-	sprintf(str, "store i32 %d, i32* %%%d, align 4", value, x);
+	sprintf(str, "store i32 %d, i32* %%%d, align 4", idx, x);
 	emit(str);
-	return x;
+	return emit_load(x, INT_TYPE);
 }
 
 int emit_gt(AST *ast) {
@@ -282,20 +317,14 @@ int emit_program(AST *ast) {
 	return -1;
 }
 
-int emit_read(AST *ast) {
-	trace("read");
-	return -1;
-}
-
 int emit_real_val(AST *ast) {
 	trace("real_val");
-	printf("zungas\n");
 	int x = new_float_reg();
-	float value = get_float_data(ast);
+	double value = get_float_data(ast); // llvm seems to use double
 	char str[500];
-	sprintf(str, "store float 0x%x, float* %%%d, align 4", *(unsigned int*)&value, x);
+	sprintf(str, "store float 0x%lx, float* %%%d, align 4", *(unsigned long int*)&value, x);
 	emit(str);
-	return x;
+	return emit_load(x, REAL_TYPE);
 }
 
 // TODO make generic
@@ -303,8 +332,10 @@ int emit_return(AST* ast) {
 	trace("return");
 	char str[500];
 	AST* child = get_child(ast, 0);
+	Type node_type = get_node_type(child);
 	int reg = rec_emit_code(child);
-	sprintf(str, "ret %s %%%d", get_llvm_type(get_node_type(child)), reg);
+	/*reg = emit_load(reg, node_type);*/
+	sprintf(str, "ret %s %%%d", get_llvm_type(node_type), reg);
 	emit(str);
 	return -1;
 }
@@ -322,7 +353,7 @@ int emit_str_val(AST *ast) {
 	char str[500];
 	sprintf(str, "store i8* getelementptr inbounds ([%d x i8], [%d x i8]* @.str.%d, i64 0, i64 0), i8** %%%d, align 8", str_len+1, str_len+1, str_idx, x);
 	emit(str);
-	return -1;
+	return emit_load(x, STR_TYPE);
 }
 
 int emit_times(AST *ast) {
@@ -349,11 +380,7 @@ int emit_var_list(AST *ast) {
 
 int emit_var_use(AST *ast) {
 	trace("var_use");
-	Type ast_type = get_node_type(ast);
-	char str[500];
-	sprintf(str, "load %s, %s* %%%d, align 4", get_llvm_type(ast_type), get_llvm_type(ast_type), 1);
-	int x = new_reg_emit(str);
-	return x;
+	return emit_load(1+get_var_offset(var_table, get_data(ast)), get_node_type(ast));
 }
 
 int emit_void_val(AST* ast) {

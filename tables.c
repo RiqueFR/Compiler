@@ -79,6 +79,10 @@ struct var_table {
     int size;
 };
 
+int get_var_table_size(VarTable* vt) {
+	return vt->size;
+}
+
 int lookup_for_create_var(VarTable* vt, char* s, int scope) {
     for (int i = 0; i < vt->size; i++) {
         if (strcmp(vt->t[i].name, s) == 0 && scope == get_scope(vt, i))/*variable in the same scope passed or global scope*/  {

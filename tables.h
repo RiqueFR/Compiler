@@ -41,6 +41,8 @@ void free_str_table(StrTable *st);
 struct var_table;
 typedef struct var_table VarTable;
 
+int get_var_table_size(VarTable *vt);
+
 // Creates an empty variables table.
 VarTable *create_var_table();
 
