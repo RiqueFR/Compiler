@@ -116,6 +116,7 @@ int rec_emit_code(AST *ast);
 
 // ----------------------------------------------------------------------------
 
+// TODO find a way to do and
 int emit_and(AST* ast) {
 	trace("and");
 	int x = rec_emit_code(get_child(ast, 0));
@@ -137,7 +138,7 @@ int emit_assign(AST *ast) {
 	AST* expr_node = get_child(ast, 1);
 	int reg_expr = rec_emit_code(expr_node);
 	int idx = get_data(get_child(ast, 0));
-	store_reg(get_node_type(expr_node), idx, reg_expr);
+	store_reg(get_node_type(expr_node), 1+get_var_offset(var_table, idx), reg_expr);
 	return -1;
 }
 
@@ -242,13 +243,32 @@ int emit_print(AST* ast) {
 	return new_reg_emit(emit_str);
 }
 
-// TODO make generic
 int emit_func_use(AST* ast) {
 	trace("func_use");
 	int func_idx = get_data(ast);
 	if(!strcmp(get_func_name(func_table, func_idx), "printf")) {
 		emit_print(ast);
+		return -1;
 	}
+	char args[500];
+	args[0] = '\0';
+	int var_num = get_child_count(ast);
+	for(int i = 0; i < var_num; i++) {
+		AST* child = get_child(ast, i);
+		int reg = rec_emit_code(child);
+		char str[500];
+		sprintf(str, "%s noundef %%%d", get_llvm_type(get_node_type(child)), reg);
+		strcat(args, str);
+		if(i != var_num-1) strcat(args, ", ");
+	}
+	Type func_type = get_node_type(ast);
+	char emit_str[600];
+	if(func_type != VOID_TYPE) {
+		sprintf(emit_str, "call %s @%s(%s)", get_llvm_type(func_type), get_func_name(func_table, func_idx), args);
+		return new_reg_emit(emit_str);
+	}
+	sprintf(emit_str, "call void @%s(%s)", get_func_name(func_table, func_idx), args);
+	emit(emit_str);
 	return -1;
 }
 
@@ -357,11 +377,13 @@ int emit_neg(AST* ast) {
 	return new_reg_emit(str);
 }
 
+// TODO
 int emit_not(AST* ast) {
 	trace("not");
 	return -1;
 }
 
+// TODO find a way to do or
 int emit_or(AST* ast) {
 	trace("or");
 	return -1;
