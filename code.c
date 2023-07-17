@@ -203,6 +203,7 @@ int emit_func_decl(AST* ast) {
 	return -1;
 }
 
+// TODO \n do not work
 int emit_print(AST* ast) {
 	trace("print");
 	AST* child = get_child(ast, 0);
@@ -295,7 +296,7 @@ int emit_over(AST *ast) {
 	int x = rec_emit_code(get_child(ast, 0));
 	int y = rec_emit_code(get_child(ast, 1));
 	char str[500];
-	sprintf(str, "sdiv nsw i32 %%%d, %%%d", x, y);
+	sprintf(str, "sdiv i32 %%%d, %%%d", x, y);
 	int reg = new_reg_emit(str);
 	return reg;
 }
@@ -391,12 +392,18 @@ int emit_void_val(AST* ast) {
 
 int emit_i2r(AST* ast) {
 	trace("i2r");
-	return -1;
+	int reg = rec_emit_code(get_child(ast, 0));
+	char str[500];
+	sprintf(str, "sitofp i32 %%%d to float", reg);
+	return new_reg_emit(str);
 }
 
 int emit_r2i(AST* ast) {
 	trace("r2i");
-	return -1;
+	int reg = rec_emit_code(get_child(ast, 0));
+	char str[500];
+	sprintf(str, "fptosi float %%%d to i32", reg);
+	return new_reg_emit(str);
 }
 
 int rec_emit_code(AST *ast) {
