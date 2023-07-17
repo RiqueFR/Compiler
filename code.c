@@ -73,6 +73,7 @@ void dump_str_table() {
 #endif
 
 int regs_count;
+int jump_label;
 
 int new_reg(const char* str) {
 	emit(str);
@@ -172,7 +173,7 @@ int emit_func_decl(AST* ast) {
 	for(int i = 0; i < num_vars; i++) {
 		Type var_type = get_node_type(get_child(var_list, i));
 		char arg[500];
-		sprintf(arg, "%s noundef %%%d", get_llvm_type(var_type), i);
+		sprintf(arg, "%s noundef %%param%d", get_llvm_type(var_type), i);
 		strcat(args, arg);
 		if (i != num_vars - 1) {
 			strcat(args, ", ");
@@ -181,7 +182,7 @@ int emit_func_decl(AST* ast) {
 	sprintf(str, "define dso_local %s @%s(%s) #0 {", get_llvm_type(get_node_type(ast)), get_func_name(func_table, func_idx), args);
 	emit(str);
 	// allocate all vals
-	regs_count = num_vars+1;
+	regs_count = 1;//num_vars+1;
 	for(int i = 0; i < get_var_table_size(var_table); i++) {
 		if(get_scope(var_table, i) == func_idx) {
 			switch (get_type(var_table, i)) {
@@ -198,7 +199,17 @@ int emit_func_decl(AST* ast) {
 			}
 		}
 	}
+	for(int i = 0; i < num_vars; i++) {
+		Type var_type = get_node_type(get_child(var_list, i));
+		int var_idx = get_data(get_child(var_list, i));
+		int align = 4;
+		if(var_type == STR_TYPE) align = 8;
+		char str[500];
+		sprintf(str, "store %s %%param%d, %s* %%%d, align %d", get_llvm_type(var_type), i, get_llvm_type(var_type), 1+get_var_offset(var_table, var_idx), align);
+		emit(str);
+	}
 	rec_emit_code(get_child(ast, 1));
+	if(get_node_type(ast) == VOID_TYPE) emit("ret void");
 	emit("}");
 	return -1;
 }
@@ -243,6 +254,46 @@ int emit_func_use(AST* ast) {
 
 int emit_if(AST *ast) {
 	trace("if");
+	int x = rec_emit_code(get_child(ast, 0));
+	char str[500];
+	sprintf(str, "icmp ne i32 %%%d, 0", x);
+	x = new_reg_emit(str);
+
+	int br_true = jump_label++;
+	if(get_child_count(ast) > 2) { // has else statment
+		int br_false = jump_label++;
+		int br_end = jump_label++;
+		sprintf(str, "br i1 %%%d, label %%jump%d, label %%jump%d", x, br_true, br_false);
+		emit(str);
+
+		sprintf(str, "jump%d:", br_true);
+		emit(str);
+		rec_emit_code(get_child(ast, 1));
+		sprintf(str, "br label %%jump%d", br_end);
+		emit(str);
+
+		sprintf(str, "jump%d:", br_false);
+		emit(str);
+		rec_emit_code(get_child(ast, 2));
+		sprintf(str, "br label %%jump%d", br_end);
+		emit(str);
+
+		sprintf(str, "jump%d:", br_end);
+		emit(str);
+	} else {
+		int br_end = jump_label++;
+		sprintf(str, "br i1 %%%d, label %%jump%d, label %%jump%d", x, br_true, br_end);
+		emit(str);
+
+		sprintf(str, "jump%d:", br_true);
+		emit(str);
+		rec_emit_code(get_child(ast, 1));
+		sprintf(str, "br label %%jump%d", br_end);
+		emit(str);
+
+		sprintf(str, "jump%d:", br_end);
+		emit(str);
+	}
 	return -1;
 }
 
@@ -258,27 +309,52 @@ int emit_int_val(AST *ast) {
 
 int emit_gt(AST *ast) {
 	trace("gt");
-	return -1;
+	int x = rec_emit_code(get_child(ast, 0));
+	int y = rec_emit_code(get_child(ast, 1));
+	char str[500];
+	sprintf(str, "icmp sgt i32 %%%d, %%%d", x, y);
+	int reg = new_reg_emit(str);
+	sprintf(str, "zext i1 %%%d to i32", reg);
+	return new_reg_emit(str);
 }
 
 int emit_lt(AST *ast) {
 	trace("lt");
-	return -1;
+	int x = rec_emit_code(get_child(ast, 0));
+	int y = rec_emit_code(get_child(ast, 1));
+	char str[500];
+	sprintf(str, "icmp slt i32 %%%d, %%%d", x, y);
+	int reg = new_reg_emit(str);
+	sprintf(str, "zext i1 %%%d to i32", reg);
+	return new_reg_emit(str);
 }
 
 int emit_minus(AST *ast) {
 	trace("minus");
-	int x = rec_emit_code(get_child(ast, 0));
+	AST* child = get_child(ast, 0);
+	int x = rec_emit_code(child);
 	int y = rec_emit_code(get_child(ast, 1));
 	char str[500];
-	sprintf(str, "sub nsw i32 %%%d, %%%d", x, y);
+	switch (get_node_type(child)) {
+		case REAL_TYPE:
+			sprintf(str, "fsub float %%%d, %%%d", x, y);
+			break;
+		case INT_TYPE:
+			sprintf(str, "sub nsw i32 %%%d, %%%d", x, y);
+			break;
+		default: break;
+	}
 	int reg = new_reg_emit(str);
 	return reg;
 }
 
 int emit_neg(AST* ast) {
 	trace("neg");
-	return -1;
+	int x = rec_emit_code(get_child(ast, 0));
+	char str[500];
+	x = emit_load(x, get_node_type(ast));
+	sprintf(str, "sub nsw i32 0, %%%d", x);
+	return new_reg_emit(str);
 }
 
 int emit_not(AST* ast) {
@@ -293,20 +369,38 @@ int emit_or(AST* ast) {
 
 int emit_over(AST *ast) {
 	trace("over");
-	int x = rec_emit_code(get_child(ast, 0));
+	AST* child = get_child(ast, 0);
+	int x = rec_emit_code(child);
 	int y = rec_emit_code(get_child(ast, 1));
 	char str[500];
-	sprintf(str, "sdiv i32 %%%d, %%%d", x, y);
+	switch (get_node_type(child)) {
+		case REAL_TYPE:
+			sprintf(str, "fdiv float %%%d, %%%d", x, y);
+			break;
+		case INT_TYPE:
+			sprintf(str, "sdiv i32 %%%d, %%%d", x, y);
+			break;
+		default: break;
+	}
 	int reg = new_reg_emit(str);
 	return reg;
 }
 
 int emit_plus(AST *ast) {
 	trace("plus");
-	int x = rec_emit_code(get_child(ast, 0));
+	AST* child = get_child(ast, 0);
+	int x = rec_emit_code(child);
 	int y = rec_emit_code(get_child(ast, 1));
 	char str[500];
-	sprintf(str, "add nsw i32 %%%d, %%%d", x, y);
+	switch (get_node_type(child)) {
+		case REAL_TYPE:
+			sprintf(str, "fadd float %%%d, %%%d", x, y);
+			break;
+		case INT_TYPE:
+			sprintf(str, "add nsw i32 %%%d, %%%d", x, y);
+			break;
+		default: break;
+	}
 	int reg = new_reg_emit(str);
 	return reg;
 }
@@ -359,10 +453,19 @@ int emit_str_val(AST *ast) {
 
 int emit_times(AST *ast) {
 	trace("times");
-	int x = rec_emit_code(get_child(ast, 0));
+	AST* child = get_child(ast, 0);
+	int x = rec_emit_code(child);
 	int y = rec_emit_code(get_child(ast, 1));
 	char str[500];
-	sprintf(str, "mul nsw i32 %%%d, %%%d", x, y);
+	switch (get_node_type(child)) {
+		case REAL_TYPE:
+			sprintf(str, "fmul float %%%d, %%%d", x, y);
+			break;
+		case INT_TYPE:
+			sprintf(str, "mul i32 %%%d, %%%d", x, y);
+			break;
+		default: break;
+	}
 	int reg = new_reg_emit(str);
 	return reg;
 }
@@ -452,6 +555,7 @@ int rec_emit_code(AST *ast) {
 void emit_code(AST *ast) {
 	next_instr = 0;
     regs_count = 1; // regs start at 1
+	jump_label = 1;
     dump_str_table();
     rec_emit_code(ast);
     /*emit0(HALT);*/
