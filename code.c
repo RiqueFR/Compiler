@@ -27,6 +27,36 @@ int next_instr;
 
 // ----------------------------------------------------------------------------
 
+#define MAX_STR_SIZE 128
+static char str_buf[MAX_STR_SIZE];
+#define clear_str_buf() str_buf[0] = '\0'
+
+// Helper function to write strings.
+int escape_str(const char* s, char *n) { 
+    int i = 0, j = 0;
+    char c;
+	int size = 0;
+    while ((c = s[i++]) != '\0') { 
+        if (c == '"') {
+			continue;
+		} else if (c == '\n') {
+            n[j++] = '\\';
+            n[j++] = '0';
+            n[j++] = 'A';
+		} else if (c == '\\' && s[i] == 'n') { 
+            n[j++] = '\\';
+            n[j++] = '0';
+            n[j++] = 'A';
+            i++;
+        } else { 
+            n[j++] = c;
+        } 
+		size++;
+    } 
+    n[j] = '\0';
+	return size;
+}
+
 void emit(const char* instr) {
 	printf("%s\n", instr);
 	next_instr++;
@@ -58,7 +88,9 @@ void dump_str_table() {
     int table_size = get_str_table_size(str_table);
 	for (int i = 0; i < table_size; i++) {
 		char* str = get_string(str_table, i);
-        printf("@.str.%d = private unnamed_addr constant [%d x i8] c\"%s\\00\", align 1\n", i, 1+(int)strlen(str), str);
+		clear_str_buf();
+		int size = escape_str(str, str_buf);
+        printf("@.str.%d = private unnamed_addr constant [%d x i8] c\"%s\\00\", align 1\n", i, 1+size, str_buf);
     }
 }
 
@@ -232,23 +264,24 @@ int emit_print(AST* ast) {
 	switch (child_type) {
 		case STR_TYPE:
 			print_str_idx = add_string(str_table, "%s");
-			break;
+			sprintf(emit_str, "call i32 (i8*, ...) @printf(i8* noundef getelementptr inbounds ([3 x i8], [3 x i8]* @.str.%d, i64 0, i64 0), %s noundef %%%d)", print_str_idx, get_llvm_type(child_type), child_reg);
+			return new_reg_emit(emit_str);
 		case INT_TYPE:
-			print_str_idx = add_string(str_table, "%d");
+			print_str_idx = add_string(str_table, "%d\n");
 			break;
 		case REAL_TYPE:
-			print_str_idx = add_string(str_table, "%f");
+			print_str_idx = add_string(str_table, "%f\n");
 			sprintf(emit_str, "fpext float %%%d to double", child_reg);
 			int float_conv = new_reg_emit(emit_str);
-			sprintf(emit_str, "call i32 (i8*, ...) @printf(i8* noundef getelementptr inbounds ([3 x i8], [3 x i8]* @.str.%d, i64 0, i64 0), double noundef %%%d)", print_str_idx, float_conv);
+			sprintf(emit_str, "call i32 (i8*, ...) @printf(i8* noundef getelementptr inbounds ([4 x i8], [4 x i8]* @.str.%d, i64 0, i64 0), double noundef %%%d)", print_str_idx, float_conv);
 			return new_reg_emit(emit_str);
-			break;
 		default:break;
 	}
-	sprintf(emit_str, "call i32 (i8*, ...) @printf(i8* noundef getelementptr inbounds ([3 x i8], [3 x i8]* @.str.%d, i64 0, i64 0), %s noundef %%%d)", print_str_idx, get_llvm_type(child_type), child_reg);
+	sprintf(emit_str, "call i32 (i8*, ...) @printf(i8* noundef getelementptr inbounds ([4 x i8], [4 x i8]* @.str.%d, i64 0, i64 0), %s noundef %%%d)", print_str_idx, get_llvm_type(child_type), child_reg);
 	return new_reg_emit(emit_str);
 }
 
+// TODO scanf
 int emit_func_use(AST* ast) {
 	trace("func_use");
 	int func_idx = get_data(ast);
@@ -519,7 +552,7 @@ int emit_str_val(AST *ast) {
     trace("str_val");
 	int x = new_str_reg();
 	int str_idx = get_data(ast);
-	int str_len = strlen(get_string(str_table, str_idx));
+	int str_len = escape_str(get_string(str_table, str_idx), str_buf);
 	char str[500];
 	sprintf(str, "store i8* getelementptr inbounds ([%d x i8], [%d x i8]* @.str.%d, i64 0, i64 0), i8** %%%d, align 8", str_len+1, str_len+1, str_idx, x);
 	emit(str);
