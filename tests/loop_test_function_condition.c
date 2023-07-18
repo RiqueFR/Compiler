@@ -10,7 +10,7 @@ int par(int i){
     else{
         return 1;
     }
-    
+    return 1;
 }
 int main(){
     int i = 20;

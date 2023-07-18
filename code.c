@@ -146,7 +146,13 @@ int emit_block(AST *ast) {
 	trace("block");
 	int size = get_child_count(ast);
 	for(int i = 0; i < size; i++) {
-		rec_emit_code(get_child(ast, i));
+		AST* child = get_child(ast, i);
+		rec_emit_code(child);
+		if(get_kind(child) == RETURN_NODE && i != size - 1) {
+			char str[500];
+			sprintf(str, "%d:", regs_count++);
+			emit(str);
+		}
 	}
 	return -1;
 }
@@ -272,6 +278,17 @@ int emit_func_use(AST* ast) {
 	return -1;
 }
 
+int last_node_if_is_return(AST* ast_block) {
+	int size = get_child_count(ast_block);
+	if(size > 0) {
+		AST* last_child = get_child(ast_block, size-1);
+		if(get_kind(last_child) == RETURN_NODE) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
 int emit_if(AST *ast) {
 	trace("if");
 	int x = rec_emit_code(get_child(ast, 0));
@@ -286,17 +303,23 @@ int emit_if(AST *ast) {
 		sprintf(str, "br i1 %%%d, label %%jump%d, label %%jump%d", x, br_true, br_false);
 		emit(str);
 
+		AST* true_block = get_child(ast, 1);
 		sprintf(str, "jump%d:", br_true);
 		emit(str);
-		rec_emit_code(get_child(ast, 1));
-		sprintf(str, "br label %%jump%d", br_end);
-		emit(str);
+		rec_emit_code(true_block);
+		if(!last_node_if_is_return(true_block)) {
+			sprintf(str, "br label %%jump%d", br_end);
+			emit(str);
+		}
 
+		AST* false_block = get_child(ast, 2);
 		sprintf(str, "jump%d:", br_false);
 		emit(str);
-		rec_emit_code(get_child(ast, 2));
-		sprintf(str, "br label %%jump%d", br_end);
-		emit(str);
+		rec_emit_code(false_block);
+		if(!last_node_if_is_return(false_block)) {
+			sprintf(str, "br label %%jump%d", br_end);
+			emit(str);
+		}
 
 		sprintf(str, "jump%d:", br_end);
 		emit(str);
@@ -305,11 +328,14 @@ int emit_if(AST *ast) {
 		sprintf(str, "br i1 %%%d, label %%jump%d, label %%jump%d", x, br_true, br_end);
 		emit(str);
 
+		AST* true_block = get_child(ast, 1);
 		sprintf(str, "jump%d:", br_true);
 		emit(str);
-		rec_emit_code(get_child(ast, 1));
-		sprintf(str, "br label %%jump%d", br_end);
-		emit(str);
+		rec_emit_code(true_block);
+		if(!last_node_if_is_return(true_block)) {
+			sprintf(str, "br label %%jump%d", br_end);
+			emit(str);
+		}
 
 		sprintf(str, "jump%d:", br_end);
 		emit(str);
@@ -446,14 +472,16 @@ int emit_real_val(AST *ast) {
 	return emit_load(x, REAL_TYPE);
 }
 
-// TODO make generic
 int emit_return(AST* ast) {
 	trace("return");
+	if(get_child_count(ast) == 0) { // return void
+		emit("ret void");
+		return -1;
+	}
 	char str[500];
 	AST* child = get_child(ast, 0);
 	Type node_type = get_node_type(child);
 	int reg = rec_emit_code(child);
-	/*reg = emit_load(reg, node_type);*/
 	sprintf(str, "ret %s %%%d", get_llvm_type(node_type), reg);
 	emit(str);
 	return -1;
