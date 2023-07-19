@@ -150,15 +150,14 @@ int rec_emit_code(AST *ast);
 
 // TODO find a way to do and
 int emit_and(AST* ast) {
-	trace("and");
-	int x = rec_emit_code(get_child(ast, 0));
-	int y = rec_emit_code(get_child(ast, 1));
-	char str[500];
-	sprintf(str, "icmp ne i32 %%%d, %%%d", x, y);
-	int reg = new_reg_emit(str);
-	sprintf(str, "zext i1 %%%d to i32", reg);
-	return new_reg_emit(str);
+    trace("and");
+    int x = rec_emit_code(get_child(ast, 0));
+    int y = rec_emit_code(get_child(ast, 1));
+    char str[500];
+    sprintf(str, "and i32 %%%d, %%%d", x, y);
+    return new_reg_emit(str);
 }
+
 
 // TODO test
 int emit_array_use(AST* ast) {
