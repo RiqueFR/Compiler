@@ -299,7 +299,7 @@ int new_var() {
 }
 int new_array(int size) {
 	int relative_pos = get_func_num_vars(func_table, scope);
-	add_array_to_func(func_table, scope, size);
+	add_var_to_func(func_table, scope);
     return add_array(var_table, id_string, yylineno, type, scope, 0, relative_pos, size);
 }
 

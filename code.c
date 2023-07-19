@@ -160,17 +160,45 @@ int emit_and(AST* ast) {
 	return new_reg_emit(str);
 }
 
+// TODO test
 int emit_array_use(AST* ast) {
 	trace("array_use");
-	return -1;
+	AST* var_use = get_child(ast, 0);
+	int array_pos = get_data(get_child(ast, 1));
+	int var_idx = get_data(var_use);
+	int array_size = get_array_size(var_table, var_idx);
+	Type array_type = get_array_type(var_table, var_idx);
+	char str[500];
+	sprintf(str, "getelementptr inbounds [%d x %s], [%d x %s]* %%%d, i64 0, i64 %d", array_size, get_llvm_type(array_type), array_size, get_llvm_type(array_type), get_var_offset(var_table, var_idx)+1, array_pos);
+	int array_reg = new_reg_emit(str);
+	int align = 4;
+	if(array_type == STR_TYPE) align = 8;
+	sprintf(str, "load %s, %s* %%%d, align %d", get_llvm_type(array_type), get_llvm_type(array_type), array_reg, align);
+	return new_reg_emit(str);
 }
 
+// TODO test
 int emit_assign(AST *ast) {
 	trace("assign");
 	AST* expr_node = get_child(ast, 1);
 	int reg_expr = rec_emit_code(expr_node);
-	int idx = get_data(get_child(ast, 0));
-	store_reg(get_node_type(expr_node), 1+get_var_offset(var_table, idx), reg_expr);
+	AST* var_use = get_child(ast, 0);
+	if(get_node_type(var_use) == ARRAY) {
+		int idx = get_data(get_child(var_use, 0));
+		int array_pos = rec_emit_code(get_child(var_use, 1));
+		int array_size = get_array_size(var_table, idx);
+		Type array_type = get_array_type(var_table, idx);
+		char str[500];
+		sprintf(str, "sext i32 %%%d to i64", array_pos);
+		int reg_sext  = new_reg_emit(str);
+		sprintf(str, "getelementptr inbounds [%d x %s], [%d x %s]* %%%d, i64 0, i64 %%%d", array_size, get_llvm_type(array_type), array_size, get_llvm_type(array_type), 1+get_var_offset(var_table, idx), reg_sext);
+		int reg_array = new_reg_emit(str);
+		store_reg(array_type, reg_array, reg_expr);
+	}
+	else {
+		int idx = get_data(var_use);
+		store_reg(get_node_type(expr_node), 1+get_var_offset(var_table, idx), reg_expr);
+	}
 	return -1;
 }
 
@@ -233,6 +261,13 @@ int emit_func_decl(AST* ast) {
 					break;
 				case STR_TYPE:
 					new_str_reg();
+					break;
+				case ARRAY:
+					int array_size = get_array_size(var_table, i);
+					Type array_type = get_array_type(var_table, i);
+					char str[500];
+					sprintf(str, "alloca [%d x %s], align 8", array_size, get_llvm_type(array_type));
+					new_reg_emit(str);
 					break;
 				default:break;
 			}
