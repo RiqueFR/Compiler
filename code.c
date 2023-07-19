@@ -515,9 +515,14 @@ int emit_neg(AST* ast) {
 
 // TODO
 int emit_not(AST* ast) {
-	trace("not");
-	return -1;
+    trace("not");
+    int x = rec_emit_code(get_child(ast, 0));
+    char str[500];
+    sprintf(str, "xor i32 %%%d, 1", x);
+    int reg = new_reg_emit(str);
+    return reg;
 }
+
 
 // TODO find a way to do or
 int emit_or(AST* ast) {
