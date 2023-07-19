@@ -1,7 +1,7 @@
 int main() {
 	int vet[10];
 	int i = 9;
-	while(i > 0 || i == 0) {
+	while(i > -1) {
 		vet[i] = i+1;
 		i = i - 1;
 	}

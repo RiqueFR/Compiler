@@ -8,4 +8,5 @@ int main() {
 	a[1] = 7;
 	teste(a[0]);
 	teste(a[1]);
+	return 0;
 }

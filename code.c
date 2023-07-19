@@ -164,12 +164,14 @@ int emit_and(AST* ast) {
 int emit_array_use(AST* ast) {
 	trace("array_use");
 	AST* var_use = get_child(ast, 0);
-	int array_pos = get_data(get_child(ast, 1));
+	int array_pos = rec_emit_code(get_child(ast, 1));
 	int var_idx = get_data(var_use);
 	int array_size = get_array_size(var_table, var_idx);
 	Type array_type = get_array_type(var_table, var_idx);
 	char str[500];
-	sprintf(str, "getelementptr inbounds [%d x %s], [%d x %s]* %%%d, i64 0, i64 %d", array_size, get_llvm_type(array_type), array_size, get_llvm_type(array_type), get_var_offset(var_table, var_idx)+1, array_pos);
+	sprintf(str, "sext i32 %%%d to i64", array_pos);
+	int reg_sext  = new_reg_emit(str);
+	sprintf(str, "getelementptr inbounds [%d x %s], [%d x %s]* %%%d, i64 0, i64 %%%d", array_size, get_llvm_type(array_type), array_size, get_llvm_type(array_type), get_var_offset(var_table, var_idx)+1, reg_sext);
 	int array_reg = new_reg_emit(str);
 	int align = 4;
 	if(array_type == STR_TYPE) align = 8;
@@ -219,10 +221,14 @@ int emit_block(AST *ast) {
 
 int emit_eq(AST *ast) {
 	trace("eq");
-	int x = rec_emit_code(get_child(ast, 0));
+	AST* child1 = get_child(ast, 0);
+	int x = rec_emit_code(child1);
 	int y = rec_emit_code(get_child(ast, 1));
 	char str[500];
-	sprintf(str, "icmp eq i32 %%%d, %%%d", x, y);
+	if(get_node_type(child1) == INT_TYPE)
+		sprintf(str, "icmp eq i32 %%%d, %%%d", x, y);
+	else
+		sprintf(str, "fcmp oeq float %%%d, %%%d", x, y);
 	int reg = new_reg_emit(str);
 	sprintf(str, "zext i1 %%%d to i32", reg);
 	return new_reg_emit(str);
@@ -452,10 +458,14 @@ int emit_int_val(AST *ast) {
 
 int emit_gt(AST *ast) {
 	trace("gt");
-	int x = rec_emit_code(get_child(ast, 0));
+	AST* child1 = get_child(ast, 0);
+	int x = rec_emit_code(child1);
 	int y = rec_emit_code(get_child(ast, 1));
 	char str[500];
-	sprintf(str, "icmp sgt i32 %%%d, %%%d", x, y);
+	if(get_node_type(child1) == INT_TYPE)
+		sprintf(str, "icmp sgt i32 %%%d, %%%d", x, y);
+	else
+		sprintf(str, "fcmp ogt float %%%d, %%%d", x, y);
 	int reg = new_reg_emit(str);
 	sprintf(str, "zext i1 %%%d to i32", reg);
 	return new_reg_emit(str);
@@ -463,10 +473,14 @@ int emit_gt(AST *ast) {
 
 int emit_lt(AST *ast) {
 	trace("lt");
-	int x = rec_emit_code(get_child(ast, 0));
+	AST* child1 = get_child(ast, 0);
+	int x = rec_emit_code(child1);
 	int y = rec_emit_code(get_child(ast, 1));
 	char str[500];
-	sprintf(str, "icmp slt i32 %%%d, %%%d", x, y);
+	if(get_node_type(child1) == INT_TYPE)
+		sprintf(str, "icmp slt i32 %%%d, %%%d", x, y);
+	else
+		sprintf(str, "fcmp olt float %%%d, %%%d", x, y);
 	int reg = new_reg_emit(str);
 	sprintf(str, "zext i1 %%%d to i32", reg);
 	return new_reg_emit(str);
@@ -495,7 +509,6 @@ int emit_neg(AST* ast) {
 	trace("neg");
 	int x = rec_emit_code(get_child(ast, 0));
 	char str[500];
-	x = emit_load(x, get_node_type(ast));
 	sprintf(str, "sub nsw i32 0, %%%d", x);
 	return new_reg_emit(str);
 }

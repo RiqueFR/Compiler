@@ -1,11 +1,3 @@
-void printf(){
-	/* so para ele parar de quebrar*/
-}
-
-void print( char* string) {
-	printf();
-}
-
 int calcula(int x, int y){
 	return x + y;
 }
@@ -21,18 +13,26 @@ int main (  )      		{
 	 *
 	 */
 	float res = x /4.56 * y;
+	printf(x);
+	printf(y);
+	printf(res);
 	
-	char* sTring_OuT2 ="That is not a if, it is a char*";
+	char* sTring_OuT2 ="That is not a if, it is a char*\n";
+	printf(sTring_OuT2);
 	
-	int int_array[3] = {0, 2, 4};
+	int int_array[3];
+	int_array[0] = 0;
+	int_array[1] = 2;
+	int_array[2] = 4;
 
 	int aux = 0;
 	while ( aux < 3) {
 		res = res + int_array[aux];
+		printf(res);
 		aux = aux + 1;
 	}
 
-	if((x == y && x > 3 && y < 10) || !(res > 0)) {
+	if(res == y/*(x == y && x > 3 && y < 10) || !(res > 0)*/) {
 		return 1;
 	} else {
 		if (res > 0) {

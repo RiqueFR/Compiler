@@ -5,6 +5,7 @@ int max(int a, int b) {
     } else {
         return b;
     }
+	return b;
 }
 
 int test() {
@@ -21,6 +22,7 @@ int cond() {
     } else {
         return y;
     }
+	return y;
 }
 
 int main() {
@@ -29,8 +31,11 @@ int main() {
 
     while (x < y) {
         x = x + 1;
+		printf(x);
     }
+	y = y + 5;
 
     int z = max(x, y);
+	printf(z);
     return z;
 }
