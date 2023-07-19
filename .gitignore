@@ -9,3 +9,5 @@ parser.c
 parser.h
 out.dot
 out.pdf
+*.ll
+*.s

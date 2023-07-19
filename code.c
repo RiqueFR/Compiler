@@ -281,12 +281,41 @@ int emit_print(AST* ast) {
 	return new_reg_emit(emit_str);
 }
 
-// TODO scanf
+// TODO fix string scan (segfault)
+int emit_scan(AST* ast) {
+	trace("scan");
+	AST* child = get_child(ast, 0);
+	Type child_type = get_node_type(child);
+	int var_idx = get_data(child);
+	char emit_str[500];
+	int print_str_idx = add_string(str_table, "%s");
+	switch (child_type) {
+		case STR_TYPE:
+			sprintf(emit_str, "load i8*, i8** %%%d, align 8", get_var_offset(var_table, var_idx)+1);
+			int str_alloc_reg = new_reg_emit(emit_str);
+			sprintf(emit_str, "call i32 (i8*, ...) @__isoc99_scanf(i8* noundef getelementptr inbounds ([3 x i8], [3 x i8]* @.str.%d, i64 0, i64 0), %s noundef %%%d)", print_str_idx, get_llvm_type(child_type), str_alloc_reg);
+			return new_reg_emit(emit_str);
+		case INT_TYPE:
+			print_str_idx = add_string(str_table, "%d");
+			break;
+		case REAL_TYPE:
+			print_str_idx = add_string(str_table, "%f");
+			break;
+		default:break;
+	}
+	sprintf(emit_str, "call i32 (i8*, ...) @__isoc99_scanf(i8* noundef getelementptr inbounds ([3 x i8], [3 x i8]* @.str.%d, i64 0, i64 0), %s* noundef %%%d)", print_str_idx, get_llvm_type(child_type), get_var_offset(var_table, var_idx)+1);
+	return new_reg_emit(emit_str);
+}
+
 int emit_func_use(AST* ast) {
 	trace("func_use");
 	int func_idx = get_data(ast);
 	if(!strcmp(get_func_name(func_table, func_idx), "printf")) {
 		emit_print(ast);
+		return -1;
+	}
+	if(!strcmp(get_func_name(func_table, func_idx), "scanf")) {
+		emit_scan(ast);
 		return -1;
 	}
 	char args[500];
@@ -489,9 +518,18 @@ int emit_plus(AST *ast) {
 int emit_program(AST *ast) {
     trace("program");
 	rec_emit_code(get_child(ast, 0));
+	emit("declare i32 @__isoc99_scanf(i8* noundef, ...) #1");
 	emit("declare i32 @printf(i8* noundef, ...) #1");
+	emit("!llvm.module.flags = !{!0, !1, !2, !3, !4}");
+	emit("!0 = !{i32 1, !\"wchar_size\", i32 4}");
+	emit("!1 = !{i32 7, !\"PIC Level\", i32 2}");
+	emit("!2 = !{i32 7, !\"PIE Level\", i32 2}");
+	emit("!3 = !{i32 7, !\"uwtable\", i32 1}");
+	emit("!4 = !{i32 7, !\"frame-pointer\", i32 2}");
 	emit("!6 = distinct !{!6, !7}");
 	emit("!7 = !{!\"llvm.loop.mustprogress\"}");
+	emit("attributes #0 = { noinline nounwind optnone uwtable \"frame-pointer\"=\"all\" \"min-legal-vector-width\"=\"0\" \"no-trapping-math\"=\"true\" \"stack-protector-buffer-size\"=\"8\" \"target-cpu\"=\"x86-64\" \"target-features\"=\"+cx8,+fxsr,+mmx,+sse,+sse2,+x87\" \"tune-cpu\"=\"generic\" }");
+	emit("attributes #1 = { \"frame-pointer\"=\"all\" \"no-trapping-math\"=\"true\" \"stack-protector-buffer-size\"=\"8\" \"target-cpu\"=\"x86-64\" \"target-features\"=\"+cx8,+fxsr,+mmx,+sse,+sse2,+x87\" \"tune-cpu\"=\"generic\" }");
 	return -1;
 }
 

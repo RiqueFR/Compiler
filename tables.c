@@ -50,6 +50,8 @@ StrTable* create_str_table() {
 	add_string(st, "%s\0");
 	add_string(st, "%d\n\0");
 	add_string(st, "%f\n\0");
+	add_string(st, "%d\0");
+	add_string(st, "%f\0");
     return st;
 }
 
