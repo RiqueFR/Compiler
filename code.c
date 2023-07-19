@@ -268,13 +268,13 @@ int emit_func_decl(AST* ast) {
 				case STR_TYPE:
 					new_str_reg();
 					break;
-				case ARRAY:
+				/* case ARRAY:
 					int array_size = get_array_size(var_table, i);
 					Type array_type = get_array_type(var_table, i);
 					char str[500];
 					sprintf(str, "alloca [%d x %s], align 8", array_size, get_llvm_type(array_type));
 					new_reg_emit(str);
-					break;
+					break; */
 				default:break;
 			}
 		}
@@ -522,7 +522,12 @@ int emit_not(AST* ast) {
 // TODO find a way to do or
 int emit_or(AST* ast) {
 	trace("or");
-	return -1;
+    int x = rec_emit_code(get_child(ast, 0));
+    int y = rec_emit_code(get_child(ast, 1));
+    char str[500];
+    sprintf(str, "or i32 %%%d, %%%d", x, y);
+    int reg = new_reg_emit(str);
+    return reg;
 }
 
 int emit_over(AST *ast) {
