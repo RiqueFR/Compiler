@@ -32,6 +32,7 @@
     Type check_type_op(AST* type_left, AST* type_right, char* op_str);
     Type check_type_assign(AST* type_left, AST* type_right, char* op_str);
 	AST* unify_bin_return(Type func_type, AST* return_exp_node, NodeKind kind, Unif (*unify)(Type,Type));
+	AST* unify_bin_comp(AST* expr_node);
 	AST* unify_bin_node(AST* l, AST* r,
                     NodeKind kind, const char* op, Unif (*unify)(Type,Type));
 	void check_condition(AST* type, char* condition);
@@ -165,12 +166,12 @@ opt_arg_list
 	;
 
 loop_stmt
-	: WHILE LPAR expr RPAR LCBRA stmt_list RCBRA { check_condition($3, "while"); $$ = new_subtree(WHILE_NODE, VOID_TYPE, 2, $3, $6); }
+	: WHILE LPAR expr RPAR LCBRA stmt_list RCBRA { AST* conv = unify_bin_comp($3); check_condition(conv, "while"); $$ = new_subtree(WHILE_NODE, VOID_TYPE, 2, conv, $6); }
 	;
 
 if_stmt
-	: IF LPAR expr RPAR LCBRA stmt_list RCBRA ELSE LCBRA stmt_list RCBRA { check_condition($3, "if"); $$ = new_subtree(IF_NODE, VOID_TYPE, 3, $3, $6, $10); }
-	| IF LPAR expr RPAR LCBRA stmt_list RCBRA { check_condition($3, "if"); $$ = new_subtree(IF_NODE, VOID_TYPE, 2, $3, $6); }
+	: IF LPAR expr RPAR LCBRA stmt_list RCBRA ELSE LCBRA stmt_list RCBRA { AST* conv = unify_bin_comp($3); check_condition(conv, "if"); $$ = new_subtree(IF_NODE, VOID_TYPE, 3, conv, $6, $10); }
+	| IF LPAR expr RPAR LCBRA stmt_list RCBRA { AST* conv = unify_bin_comp($3); check_condition(conv, "if"); $$ = new_subtree(IF_NODE, VOID_TYPE, 2, conv, $6); }
 	;
 
 array_base_declaration
@@ -207,8 +208,8 @@ expr
 	: LPAR expr RPAR { $$ = $2; }
 	| NOT expr { $$ = new_subtree(NOT_NODE, check_type_op($2, $2, "!"), 1, $2); }
 	| MINUS expr %prec UMINUS { $$ = new_subtree(NEG_NODE, check_type_mul($2, $2, "-"), 1, $2); }
-	| expr AND expr { $$ = unify_bin_node($1, $3, AND_NODE, "&&", op); }
-	| expr OR expr { $$ = unify_bin_node($1, $3, OR_NODE, "||", op); }
+	| expr AND expr { $$ = unify_bin_node($1, $3, AND_NODE, "&&", logic); }
+	| expr OR expr { $$ = unify_bin_node($1, $3, OR_NODE, "||", logic); }
 	| expr LT expr { $$ = unify_bin_node($1, $3, LT_NODE, "<", op); }
 	| expr GT expr { $$ = unify_bin_node($1, $3, GT_NODE, ">", op); }
 	| expr EQ expr { $$ = unify_bin_node($1, $3, EQ_NODE, "==", op); }
@@ -366,6 +367,10 @@ AST* create_conv_node(Conv conv, AST *n) {
     switch(conv) {
         case I2F:  return new_subtree(I2R_NODE, REAL_TYPE, 1, n);
         case F2I:  return new_subtree(R2I_NODE, INT_TYPE,  1, n);
+        case I2B:  return new_subtree(I2B_NODE, BOOL_TYPE, 1, n);
+        case B2I:  return new_subtree(B2I_NODE, INT_TYPE,  1, n);
+        case F2B:  return new_subtree(R2B_NODE, BOOL_TYPE,  1, n);
+        case B2F:  return new_subtree(B2R_NODE, REAL_TYPE, 1, n);
         case NONE: return n;
         default:
             printf("INTERNAL ERROR: invalid conversion of types!\n");
@@ -379,6 +384,11 @@ AST* unify_bin_return(Type func_type, AST* return_exp_node, NodeKind kind, Unif 
 	// check should already had been done
     return_exp_node = create_conv_node(unif.rc, return_exp_node);
     return new_subtree(kind, unif.type, 1, return_exp_node);
+}
+
+AST* unify_bin_comp(AST* expr_node) {
+	Unif unif = assign(BOOL_TYPE, get_node_type(expr_node));
+	return create_conv_node(unif.rc, expr_node);
 }
 
 AST* unify_bin_node(AST* l, AST* r,
@@ -396,7 +406,7 @@ AST* unify_bin_node(AST* l, AST* r,
 
 void check_condition(AST* ast, char* condition) {
 	Type type = get_node_type(ast);
-    if(type != INT_TYPE) {
+    if(type != BOOL_TYPE) {
         printf("SEMANTIC ERROR (%d): conditional expression in '%s' is '%s' instead of 'integer'.\n", yylineno, condition, get_text(type));
         exit(EXIT_FAILURE);
     }   
