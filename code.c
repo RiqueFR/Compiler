@@ -148,7 +148,6 @@ int rec_emit_code(AST *ast);
 
 // ----------------------------------------------------------------------------
 
-// TODO find a way to do and
 int emit_and(AST* ast) {
     trace("and");
     int x = rec_emit_code(get_child(ast, 0));
@@ -396,8 +395,6 @@ int emit_if(AST *ast) {
 	trace("if");
 	int x = rec_emit_code(get_child(ast, 0));
 	char str[500];
-	sprintf(str, "icmp ne i1 %%%d, 0", x);
-	x = new_reg_emit(str);
 
 	int br_true = jump_label++;
 	if(get_child_count(ast) > 2) { // has else statment
@@ -466,8 +463,6 @@ int emit_gt(AST *ast) {
 		sprintf(str, "icmp sgt i32 %%%d, %%%d", x, y);
 	else
 		sprintf(str, "fcmp ogt float %%%d, %%%d", x, y);
-	int reg = new_reg_emit(str);
-	sprintf(str, "zext i1 %%%d to i1", reg);
 	return new_reg_emit(str);
 }
 
@@ -481,8 +476,6 @@ int emit_lt(AST *ast) {
 		sprintf(str, "icmp slt i32 %%%d, %%%d", x, y);
 	else
 		sprintf(str, "fcmp olt float %%%d, %%%d", x, y);
-	int reg = new_reg_emit(str);
-	sprintf(str, "zext i1 %%%d to i1", reg);
 	return new_reg_emit(str);
 }
 
@@ -524,7 +517,6 @@ int emit_not(AST* ast) {
 }
 
 
-// TODO find a way to do or
 int emit_or(AST* ast) {
 	trace("or");
     int x = rec_emit_code(get_child(ast, 0));
@@ -628,8 +620,6 @@ int emit_while(AST *ast) {
 	sprintf(str, "jump%d:", br_expr);
 	emit(str);
 	int res = rec_emit_code(get_child(ast, 0));
-	sprintf(str, "icmp ne i32 %%%d, 0", res);
-	res = new_reg_emit(str);
 	sprintf(str, "br i1 %%%d, label %%jump%d, label %%jump%d", res, br_block, br_end);
 	emit(str);
 
@@ -713,6 +703,38 @@ int emit_r2i(AST* ast) {
 	return new_reg_emit(str);
 }
 
+int emit_b2r(AST* ast) {
+	trace("b2r");
+	int reg = rec_emit_code(get_child(ast, 0));
+	char str[500];
+	sprintf(str, "uitofp i1 %%%d to float", reg);
+	return new_reg_emit(str);
+}
+
+int emit_r2b(AST* ast) {
+	trace("r2b");
+	int reg = rec_emit_code(get_child(ast, 0));
+	char str[500];
+	sprintf(str, "fcmp une float %%%d, 0.000000e+00", reg);
+	return new_reg_emit(str);
+}
+
+int emit_b2i(AST* ast) {
+	trace("b2i");
+	int reg = rec_emit_code(get_child(ast, 0));
+	char str[500];
+	sprintf(str, "zext i1 %%%d to i32", reg);
+	return new_reg_emit(str);
+}
+
+int emit_i2b(AST* ast) {
+	trace("i2b");
+	int reg = rec_emit_code(get_child(ast, 0));
+	char str[500];
+	sprintf(str, "icmp ne i32 %%%d, 0", reg);
+	return new_reg_emit(str);
+}
+
 int rec_emit_code(AST *ast) {
 	if(!ret_abort)
 		switch(get_kind(ast)) {
@@ -746,6 +768,10 @@ int rec_emit_code(AST *ast) {
 
 			case I2R_NODE: 			return emit_i2r(ast);
 			case R2I_NODE: 			return emit_r2i(ast);
+			case B2R_NODE: 			return emit_b2r(ast);
+			case R2B_NODE: 			return emit_r2b(ast);
+			case B2I_NODE: 			return emit_b2i(ast);
+			case I2B_NODE: 			return emit_i2b(ast);
 
 			default:
 				fprintf(stderr, "Invalid kind: %s!\n", kind2str(get_kind(ast)));

@@ -60,7 +60,11 @@ typedef enum {
   VOID_VAL_NODE,
 
   I2R_NODE,
-  R2I_NODE
+  R2I_NODE,
+  I2B_NODE,
+  B2I_NODE,
+  R2B_NODE,
+  B2R_NODE
 } NodeKind;
 
 struct node; // Opaque structure to ensure encapsulation.

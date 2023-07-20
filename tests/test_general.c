@@ -32,7 +32,7 @@ int main (  )      		{
 		aux = aux + 1;
 	}
 
-	if(res == y/*(x == y && x > 3 && y < 10) || !(res > 0)*/) {
+	if((x == y && x > 3 && y < 10) || !(res > 0)) {
 		return 1;
 	} else {
 		if (res > 0) {
