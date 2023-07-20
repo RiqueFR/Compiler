@@ -76,14 +76,6 @@ void store_reg(Type type, int dest_reg, int value_reg) {
 #define LINE_SIZE 80
 #define MAX_STR_SIZE 128
 
-
-void dump_program() {
-    /*for (int addr = 0; addr < next_instr; addr++) {*/
-        /*write_instruction(addr);*/
-    /*}*/
-}
-
-// TODO fix char encodes like \n
 void dump_str_table() {
     int table_size = get_str_table_size(str_table);
 	for (int i = 0; i < table_size; i++) {
@@ -160,7 +152,6 @@ int emit_and(AST* ast) {
 	return new_reg_emit(str);
 }
 
-// TODO test
 int emit_array_use(AST* ast) {
 	trace("array_use");
 	AST* var_use = get_child(ast, 0);
@@ -179,7 +170,6 @@ int emit_array_use(AST* ast) {
 	return new_reg_emit(str);
 }
 
-// TODO test
 int emit_assign(AST *ast) {
 	trace("assign");
 	AST* expr_node = get_child(ast, 1);
@@ -294,7 +284,6 @@ int emit_func_decl(AST* ast) {
 	return -1;
 }
 
-// TODO \n do not work
 int emit_print(AST* ast) {
 	trace("print");
 	AST* child = get_child(ast, 0);
@@ -322,7 +311,6 @@ int emit_print(AST* ast) {
 	return new_reg_emit(emit_str);
 }
 
-// TODO fix string scan (segfault)
 int emit_scan(AST* ast) {
 	trace("scan");
 	AST* child = get_child(ast, 0);
@@ -332,10 +320,16 @@ int emit_scan(AST* ast) {
 	int print_str_idx = add_string(str_table, "%s");
 	switch (child_type) {
 		case STR_TYPE:
-			sprintf(emit_str, "load i8*, i8** %%%d, align 8", get_var_offset(var_table, var_idx)+1);
+			int aux_str_reg = new_reg_emit("alloca [500 x i8], align 16");
+			sprintf(emit_str, "getelementptr inbounds [500 x i8], [500 x i8]* %%%d, i64 0, i64 0", aux_str_reg);
 			int str_alloc_reg = new_reg_emit(emit_str);
 			sprintf(emit_str, "call i32 (i8*, ...) @__isoc99_scanf(i8* noundef getelementptr inbounds ([3 x i8], [3 x i8]* @.str.%d, i64 0, i64 0), %s noundef %%%d)", print_str_idx, get_llvm_type(child_type), str_alloc_reg);
-			return new_reg_emit(emit_str);
+			int exit = new_reg_emit(emit_str);
+			sprintf(emit_str, "getelementptr inbounds [500 x i8], [500 x i8]* %%%d, i64 0, i64 0", aux_str_reg);
+			int load_reg = new_reg_emit(emit_str);
+			sprintf(emit_str, "store i8* %%%d, i8** %%%d, align 8", load_reg, get_var_offset(var_table, var_idx)+1);
+			emit(emit_str);
+			return exit;
 		case INT_TYPE:
 			print_str_idx = add_string(str_table, "%d");
 			break;
@@ -752,6 +746,4 @@ void emit_code(AST *ast) {
 	jump_label = 1;
     dump_str_table();
     rec_emit_code(ast);
-    /*emit0(HALT);*/
-    dump_program();
 }
