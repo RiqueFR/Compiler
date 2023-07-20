@@ -94,14 +94,23 @@ int lookup_for_create_var(VarTable* vt, char* s, int scope) {
     return -1;
 }
 
+int get_var_is_global_scope(VarTable* vt, int idx) {
+	return get_scope(vt, idx) == GLOBAL_SCOPE;
+}
+
 int lookup_var(VarTable* vt, char* s, int scope) {
+	// try to find local variable else try to get global one
+	int global = -1;
     for (int i = 0; i < vt->size; i++) {
-        if (strcmp(vt->t[i].name, s) == 0 &&
-	    (scope == get_scope(vt, i) || get_scope(vt,i) == GLOBAL_SCOPE))/*variable in the same scope passed or global scope*/  {
+		int var_scope = get_scope(vt, i);
+		int comp_res = strcmp(vt->t[i].name, s) == 0;
+        if (comp_res && scope == var_scope) {
             return i;
-        }
+		} else if (comp_res && get_var_is_global_scope(vt, i)) {
+			global = i;
+		}
     }
-    return -1;
+    return global;
 }
 
 int add_to_var_table(VarTable* vt, char* s, int line, Type type, Type array_type, int scope, int dimension, int relative_pos) {
@@ -197,7 +206,7 @@ typedef struct {
 
 struct func_table {
     FuncEntry t[FUNCTION_TABLE_MAX_SIZE];
-	int num_vars[FUNCTION_TABLE_MAX_SIZE + 1];
+	int num_vars[FUNCTION_TABLE_MAX_SIZE];
     int size;
 };
 
@@ -294,6 +303,8 @@ int get_func_is_builtin(FuncTable* ft, int i) {
 }
 
 void add_builtin_functions(FuncTable* ft) {
+	/*add_func_builtin(ft, "global", 0, VOID_TYPE, 0);*/
+
 	int pos = add_func_builtin(ft, "printf", 0, VOID_TYPE, 0);
 	Type args[] = {STR_TYPE};
 	add_func_params(ft, pos, args, 1);

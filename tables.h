@@ -62,6 +62,8 @@ int add_array(VarTable *vt, char *s, int line, Type type, int scope,
 // Returns the index where the given variable is stored or -1 otherwise.
 int lookup_for_create_var(VarTable *vt, char *s, int scope);
 
+int get_var_is_global_scope(VarTable *vt, int idx);
+
 // Returns the index where the given variable is stored or -1 otherwise.
 int lookup_var(VarTable *vt, char *s, int scope);
 

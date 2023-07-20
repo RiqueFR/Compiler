@@ -39,6 +39,7 @@
 	void check_array_position_type(AST* type);
 	void check_array_not_error(AST* type);
 	void check_function_num_params(int func_num_params, int call_num_params);
+	void check_declare_value_to_global_variable(int pos);
     extern int yylineno;
     extern char* yytext;
     extern char id_string[500];
@@ -126,8 +127,6 @@ type
 
 func_declaration
 	: type ID { check_new_func(); int pos = new_func();
-		// scope is func position + 1, scope 0 is global scope
-		/*scope = pos + 1;*/
 		scope = pos;
 		func_num_params = 0;
 		$1 = new_node(FUNC_DECL_NODE, pos, get_func_type(func_table, pos));
@@ -187,12 +186,12 @@ declare_array
 
 declare_id
 	: type ID { check_new_var(); int pos = new_var(); $1 = new_node(VAR_DECL_NODE, pos, get_type(var_table, pos)); } SEMI { $$ = $1; }
-	| type ID { check_new_var(); int pos = new_var(); $1 = new_node(VAR_DECL_NODE, pos, get_type(var_table, pos)); } ASSIGN expr SEMI {
-		$$ = unify_bin_node($1, $5, ASSIGN_NODE, "<", assign); }
+	| type ID { check_new_var(); int pos = new_var(); check_declare_value_to_global_variable(pos); $1 = new_node(VAR_DECL_NODE, pos, get_type(var_table, pos)); } ASSIGN expr SEMI {
+		$$ = unify_bin_node($1, $5, ASSIGN_NODE, "=", assign); }
 	;
 
 assign
-	: ID { int pos = check_var(); $1 = new_node(VAR_USE_NODE, pos, get_type(var_table, pos)); } ASSIGN expr SEMI { $$ = unify_bin_node($1, $4, ASSIGN_NODE, "<", assign); }
+	: ID { int pos = check_var(); $1 = new_node(VAR_USE_NODE, pos, get_type(var_table, pos)); } ASSIGN expr SEMI { $$ = unify_bin_node($1, $4, ASSIGN_NODE, "=", assign); }
 	| ID { int pos = check_var();
 		Type res_type = get_type(var_table, pos);
 		if (res_type == ARRAY)
@@ -431,6 +430,13 @@ void check_array_not_error(AST* ast) {
 void check_function_num_params(int func_num_params, int call_num_params) {
 	if(func_num_params != call_num_params) {
 		printf("SEMANTIC ERROR (%d): function call have '%d' arguments, but is expected to have '%d'.\n", yylineno, call_num_params, func_num_params);
+		exit(EXIT_FAILURE);
+	}
+}
+
+void check_declare_value_to_global_variable(int pos) {
+	if(get_var_is_global_scope(var_table, pos)) {
+		printf("SEMANTIC ERROR (%d): set value to global variable on definition is not supported.\n", yylineno);
 		exit(EXIT_FAILURE);
 	}
 }

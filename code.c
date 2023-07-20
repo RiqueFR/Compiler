@@ -162,7 +162,11 @@ int emit_array_use(AST* ast) {
 	char str[500];
 	sprintf(str, "sext i32 %%%d to i64", array_pos);
 	int reg_sext  = new_reg_emit(str);
-	sprintf(str, "getelementptr inbounds [%d x %s], [%d x %s]* %%%d, i64 0, i64 %%%d", array_size, get_llvm_type(array_type), array_size, get_llvm_type(array_type), get_var_offset(var_table, var_idx)+1, reg_sext);
+	if(get_var_is_global_scope(var_table, var_idx)) {
+		sprintf(str, "getelementptr inbounds [%d x %s], [%d x %s]* @%s, i64 0, i64 %%%d", array_size, get_llvm_type(array_type), array_size, get_llvm_type(array_type), get_name(var_table, var_idx), reg_sext);
+	} else {
+		sprintf(str, "getelementptr inbounds [%d x %s], [%d x %s]* %%%d, i64 0, i64 %%%d", array_size, get_llvm_type(array_type), array_size, get_llvm_type(array_type), get_var_offset(var_table, var_idx)+1, reg_sext);
+	}
 	int array_reg = new_reg_emit(str);
 	int align = 4;
 	if(array_type == STR_TYPE) align = 8;
@@ -183,13 +187,26 @@ int emit_assign(AST *ast) {
 		char str[500];
 		sprintf(str, "sext i32 %%%d to i64", array_pos);
 		int reg_sext  = new_reg_emit(str);
-		sprintf(str, "getelementptr inbounds [%d x %s], [%d x %s]* %%%d, i64 0, i64 %%%d", array_size, get_llvm_type(array_type), array_size, get_llvm_type(array_type), 1+get_var_offset(var_table, idx), reg_sext);
+		if(get_var_is_global_scope(var_table, idx)) {
+			sprintf(str, "getelementptr inbounds [%d x %s], [%d x %s]* @%s, i64 0, i64 %%%d", array_size, get_llvm_type(array_type), array_size, get_llvm_type(array_type), get_name(var_table, idx), reg_sext);
+		}
+		else {
+			sprintf(str, "getelementptr inbounds [%d x %s], [%d x %s]* %%%d, i64 0, i64 %%%d", array_size, get_llvm_type(array_type), array_size, get_llvm_type(array_type), 1+get_var_offset(var_table, idx), reg_sext);
+		}
 		int reg_array = new_reg_emit(str);
 		store_reg(array_type, reg_array, reg_expr);
 	}
 	else {
 		int idx = get_data(var_use);
-		store_reg(get_node_type(expr_node), 1+get_var_offset(var_table, idx), reg_expr);
+		if(get_var_is_global_scope(var_table, idx)) {
+			char str[500];
+			int align = 4;
+			if(get_node_type(expr_node) == STR_TYPE) align = 8;
+			sprintf(str, "store %s %%%d, %s* @%s, align %d", get_llvm_type(get_node_type(expr_node)), reg_expr, get_llvm_type(get_node_type(expr_node)), get_name(var_table, idx), align);
+			emit(str);
+		} else {
+			store_reg(get_node_type(expr_node), 1+get_var_offset(var_table, idx), reg_expr);
+		}
 	}
 	return -1;
 }
@@ -233,6 +250,7 @@ int emit_func_decl(AST* ast) {
 	AST* var_list = get_child(ast, 0);
 	int num_vars = get_child_count(var_list);
 	emit("; Function Attrs: noinline nounwind optnone uwtable");
+	// func args
 	for(int i = 0; i < num_vars; i++) {
 		Type var_type = get_node_type(get_child(var_list, i));
 		char arg[500];
@@ -244,8 +262,11 @@ int emit_func_decl(AST* ast) {
 	}
 	sprintf(str, "define dso_local %s @%s(%s) #0 {", get_llvm_type(get_node_type(ast)), get_func_name(func_table, func_idx), args);
 	emit(str);
+
 	// allocate all vals
-	regs_count = 1;//num_vars+1;
+	regs_count = 1;
+
+	// pre allocate vars
 	for(int i = 0; i < get_var_table_size(var_table); i++) {
 		if(get_scope(var_table, i) == func_idx) {
 			switch (get_type(var_table, i)) {
@@ -660,6 +681,21 @@ int emit_times(AST *ast) {
 
 int emit_var_decl(AST *ast) {
     trace("var_decl");
+	int idx = get_data(ast);
+	if(get_var_is_global_scope(var_table, idx)) {
+		char str[500];
+		if(get_node_type(ast) == ARRAY) {
+			int array_size = get_array_size(var_table, idx);
+			Type array_type = get_array_type(var_table, idx);
+			sprintf(str, "@%s = dso_local global [%d x %s] zeroinitializer , align 8", get_name(var_table, idx), array_size, get_llvm_type(array_type));
+			emit(str);
+		} else {
+			int align = 4;
+			if(get_node_type(ast) == STR_TYPE) align = 8;
+			sprintf(str, "@%s = dso_local global %s 0, align %d", get_name(var_table, idx), get_llvm_type(get_node_type(ast)), align);
+			emit(str);
+		}
+	}
 	return -1;
     // Nothing to do, memory was already cleared upon initialization.
 }
@@ -672,7 +708,15 @@ int emit_var_list(AST *ast) {
 
 int emit_var_use(AST *ast) {
 	trace("var_use");
-	return emit_load(1+get_var_offset(var_table, get_data(ast)), get_node_type(ast));
+	int var_idx = get_data(ast);
+	if(get_var_is_global_scope(var_table, var_idx)) {
+		char str[500];
+		int align = 4;
+		if(get_node_type(ast) == STR_TYPE) align = 8;
+		sprintf(str, "load %s, %s* @%s, align %d", get_llvm_type(get_node_type(ast)), get_llvm_type(get_node_type(ast)), get_name(var_table, var_idx), align);
+		return new_reg_emit(str);
+	}
+	return emit_load(1+get_var_offset(var_table, var_idx), get_node_type(ast));
 }
 
 int emit_void_val(AST* ast) {
