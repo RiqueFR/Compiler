@@ -206,7 +206,7 @@ assign
 
 expr
 	: LPAR expr RPAR { $$ = $2; }
-	| NOT expr { $$ = new_subtree(NOT_NODE, check_type_op($2, $2, "!"), 1, $2); }
+	| NOT expr { AST* conv = unify_bin_comp($2); check_condition(conv, "!"); $$ = new_subtree(NOT_NODE, BOOL_TYPE, 1, conv); }
 	| MINUS expr %prec UMINUS { $$ = new_subtree(NEG_NODE, check_type_mul($2, $2, "-"), 1, $2); }
 	| expr AND expr { $$ = unify_bin_node($1, $3, AND_NODE, "&&", logic); }
 	| expr OR expr { $$ = unify_bin_node($1, $3, OR_NODE, "||", logic); }
