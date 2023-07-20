@@ -154,7 +154,7 @@ int emit_and(AST* ast) {
     int x = rec_emit_code(get_child(ast, 0));
     int y = rec_emit_code(get_child(ast, 1));
     char str[500];
-    sprintf(str, "and i32 %%%d, %%%d", x, y);
+    sprintf(str, "and i1 %%%d, %%%d", x, y);
     return new_reg_emit(str);
 }
 
@@ -219,19 +219,20 @@ int emit_block(AST *ast) {
 }
 
 int emit_eq(AST *ast) {
-	trace("eq");
-	AST* child1 = get_child(ast, 0);
-	int x = rec_emit_code(child1);
-	int y = rec_emit_code(get_child(ast, 1));
-	char str[500];
-	if(get_node_type(child1) == INT_TYPE)
-		sprintf(str, "icmp eq i32 %%%d, %%%d", x, y);
-	else
-		sprintf(str, "fcmp oeq float %%%d, %%%d", x, y);
-	int reg = new_reg_emit(str);
-	sprintf(str, "zext i1 %%%d to i32", reg);
-	return new_reg_emit(str);
+    trace("eq");
+    AST* child1 = get_child(ast, 0);
+    int x = rec_emit_code(child1);
+    int y = rec_emit_code(get_child(ast, 1));
+    char str[500];
+
+    if (get_node_type(child1) == INT_TYPE)
+        sprintf(str, "icmp eq i32 %%%d, %%%d", x, y);
+    else
+        sprintf(str, "fcmp oeq float %%%d, %%%d", x, y);
+
+    return new_reg_emit(str);
 }
+
 
 int emit_func_decl(AST* ast) {
 	trace("func_decl");
@@ -395,7 +396,7 @@ int emit_if(AST *ast) {
 	trace("if");
 	int x = rec_emit_code(get_child(ast, 0));
 	char str[500];
-	sprintf(str, "icmp ne i32 %%%d, 0", x);
+	sprintf(str, "icmp ne i1 %%%d, 0", x);
 	x = new_reg_emit(str);
 
 	int br_true = jump_label++;
@@ -466,7 +467,7 @@ int emit_gt(AST *ast) {
 	else
 		sprintf(str, "fcmp ogt float %%%d, %%%d", x, y);
 	int reg = new_reg_emit(str);
-	sprintf(str, "zext i1 %%%d to i32", reg);
+	sprintf(str, "zext i1 %%%d to i1", reg);
 	return new_reg_emit(str);
 }
 
@@ -481,7 +482,7 @@ int emit_lt(AST *ast) {
 	else
 		sprintf(str, "fcmp olt float %%%d, %%%d", x, y);
 	int reg = new_reg_emit(str);
-	sprintf(str, "zext i1 %%%d to i32", reg);
+	sprintf(str, "zext i1 %%%d to i1", reg);
 	return new_reg_emit(str);
 }
 
@@ -517,7 +518,7 @@ int emit_not(AST* ast) {
     trace("not");
     int x = rec_emit_code(get_child(ast, 0));
     char str[500];
-    sprintf(str, "xor i32 %%%d, 1", x);
+    sprintf(str, "xor i1 %%%d, 1", x);  // Modificando para "i1"
     int reg = new_reg_emit(str);
     return reg;
 }
@@ -529,7 +530,7 @@ int emit_or(AST* ast) {
     int x = rec_emit_code(get_child(ast, 0));
     int y = rec_emit_code(get_child(ast, 1));
     char str[500];
-    sprintf(str, "or i32 %%%d, %%%d", x, y);
+    sprintf(str, "or i1 %%%d, %%%d", x, y);
     int reg = new_reg_emit(str);
     return reg;
 }
