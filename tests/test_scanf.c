@@ -10,4 +10,5 @@ int main() {
 	char* s = "Hello";
 	scanf(s);
 	printf(s);
+	return 0;
 }
